@@ -1,0 +1,130 @@
+{
+  "manuales": [
+    {
+      "id": "ejemplo-marca",
+      "nombre": "Ejemplo Marca",
+      "portada": "/galeria/ejemplo-marca/portada.svg",
+      "portadaW": 1600,
+      "portadaH": 1066,
+      "paginaW": 1600,
+      "paginaH": 1066,
+      "paginas": [
+        "/galeria/ejemplo-marca/portada.svg",
+        "/galeria/ejemplo-marca/page-01.svg",
+        "/galeria/ejemplo-marca/page-02.svg",
+        "/galeria/ejemplo-marca/page-03.svg",
+        "/galeria/ejemplo-marca/page-04.svg",
+        "/galeria/ejemplo-marca/page-05.svg",
+        "/galeria/ejemplo-marca/page-06.svg",
+        "/galeria/ejemplo-marca/page-07.svg",
+        "/galeria/ejemplo-marca/page-08.svg",
+        "/galeria/ejemplo-marca/page-09.svg",
+        "/galeria/ejemplo-marca/page-10.svg",
+        "/galeria/ejemplo-marca/page-11.svg",
+        "/galeria/ejemplo-marca/page-12.svg",
+        "/galeria/ejemplo-marca/page-13.svg",
+        "/galeria/ejemplo-marca/contraportada.svg"
+      ]
+    },
+    {
+      "id": "manual-alta",
+      "nombre": "Manual alto",
+      "portada": "/galeria/manual-alta/portada.svg",
+      "portadaW": 500,
+      "portadaH": 1500,
+      "paginaW": 500,
+      "paginaH": 1500,
+      "paginas": [
+        "/galeria/manual-alta/portada.svg",
+        "/galeria/manual-alta/page-01.svg",
+        "/galeria/manual-alta/contraportada.svg"
+      ]
+    },
+    {
+      "id": "manual-baja",
+      "nombre": "Manual bajo",
+      "portada": "/galeria/manual-baja/portada.svg",
+      "portadaW": 1500,
+      "portadaH": 500,
+      "paginaW": 1500,
+      "paginaH": 500,
+      "paginas": [
+        "/galeria/manual-baja/portada.svg",
+        "/galeria/manual-baja/page-01.svg",
+        "/galeria/manual-baja/contraportada.svg"
+      ]
+    },
+    {
+      "id": "manual-cuadrada",
+      "nombre": "Manual cuadrado",
+      "portada": "/galeria/manual-cuadrada/portada.svg",
+      "portadaW": 1000,
+      "portadaH": 1000,
+      "paginaW": 1000,
+      "paginaH": 1000,
+      "paginas": [
+        "/galeria/manual-cuadrada/portada.svg",
+        "/galeria/manual-cuadrada/page-01.svg",
+        "/galeria/manual-cuadrada/contraportada.svg"
+      ]
+    },
+    {
+      "id": "manual-de-prueba",
+      "nombre": "Manual de prueba",
+      "portada": "/galeria/manual-de-prueba/portada.svg",
+      "portadaW": 1000,
+      "portadaH": 1414,
+      "paginaW": 1000,
+      "paginaH": 1414,
+      "paginas": [
+        "/galeria/manual-de-prueba/portada.svg",
+        "/galeria/manual-de-prueba/page-01.svg",
+        "/galeria/manual-de-prueba/page-02.svg",
+        "/galeria/manual-de-prueba/page-03.svg",
+        "/galeria/manual-de-prueba/page-04.svg",
+        "/galeria/manual-de-prueba/page-05.svg",
+        "/galeria/manual-de-prueba/page-06.svg",
+        "/galeria/manual-de-prueba/page-07.svg",
+        "/galeria/manual-de-prueba/page-08.svg",
+        "/galeria/manual-de-prueba/page-09.svg",
+        "/galeria/manual-de-prueba/page-10.svg",
+        "/galeria/manual-de-prueba/page-11.svg",
+        "/galeria/manual-de-prueba/page-12.svg",
+        "/galeria/manual-de-prueba/page-13.svg",
+        "/galeria/manual-de-prueba/contraportada.svg"
+      ]
+    },
+    {
+      "id": "manual-horizontal",
+      "nombre": "Manual horizontal",
+      "portada": "/galeria/manual-horizontal/portada.svg",
+      "portadaW": 1600,
+      "portadaH": 900,
+      "paginaW": 1600,
+      "paginaH": 900,
+      "paginas": [
+        "/galeria/manual-horizontal/portada.svg",
+        "/galeria/manual-horizontal/page-01.svg",
+        "/galeria/manual-horizontal/contraportada.svg"
+      ]
+    },
+    {
+      "id": "otra-marca",
+      "nombre": "Otra Marca",
+      "portada": "/galeria/otra-marca/portada.svg",
+      "portadaW": 800,
+      "portadaH": 1131,
+      "paginaW": 800,
+      "paginaH": 1131,
+      "paginas": [
+        "/galeria/otra-marca/portada.svg",
+        "/galeria/otra-marca/page-01.svg",
+        "/galeria/otra-marca/contraportada.svg"
+      ]
+    }
+  ],
+  "ads": [
+    "/ads/banner-add-01.svg",
+    "/ads/banner-add-02.svg"
+  ]
+}

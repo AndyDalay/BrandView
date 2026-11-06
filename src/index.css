@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@600&family=Michroma&family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'Syndra';
+  src: url('/fonts/Syndra-SemiBold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --azul: #35B1FF;
+  --azul-dark: #12224F;
+  --azul-mid: #1B3A8C;
+  --azul-soft: #5C86F2;
+  --azul-tint: #DCE6FF;
+  --gris-bg: #EAEBEE;
+  --gris-line: #D4D7DD;
+  --gris-txt: #6B7280;
+  --gris-txt-oscuro: #4B5563;
+  --negro: #14171C;
+  --paper-bg: #EAF0FA;
+  --paper-edge: #D4DDEE;
+}
+
+html { font-synthesis: none; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+body {
+  margin: 0;
+  background: var(--gris-bg);
+  color: var(--negro);
+  font-family: 'Josefin Sans', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  overscroll-behavior: none;
+}
+
+.noise-layer {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: 0.06; mix-blend-mode: multiply;
+}
+
+/* Fondo: degradado radial elíptico (color de la marca) anclado en la esquina superior izquierda, bajo el header (72 px) */
+.bg-glow {
+  position: fixed; top: 72px; left: 0; width: 100vw; height: 75vh; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse 60% 60% at 0% 0%, rgba(53, 177, 255, 0.30) 0%, rgba(53, 177, 255, 0.12) 42%, rgba(53, 177, 255, 0) 72%);
+}
+
+/* Ruido más marcado junto al header, desvanecido hacia abajo */
+.noise-top {
+  position: fixed; top: 72px; left: 0; right: 0; height: 200px; pointer-events: none; z-index: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: 0.16; mix-blend-mode: multiply;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.5) 100%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.5) 100%, transparent 100%);
+}
+
+/* Sombra del libro */
+.shadow-book {
+  box-shadow:
+    0 30px 60px -20px rgba(18, 34, 79, 0.35),
+    0 10px 20px rgba(18, 34, 79, 0.12);
+}
+
+/* Hojear: la hoja gira sobre el lomo y se va recogiendo hacia él hasta desaparecer */
+@keyframes flipNext {
+  0%   { transform: rotateY(0deg) scaleX(1); }
+  45%  { transform: rotateY(-90deg) scaleX(0.8); }
+  75%  { transform: rotateY(-135deg) scaleX(0.42); }
+  100% { transform: rotateY(-180deg) scaleX(0.001); }
+}
+@keyframes flipPrev {
+  0%   { transform: rotateY(0deg) scaleX(1); }
+  45%  { transform: rotateY(90deg) scaleX(0.8); }
+  75%  { transform: rotateY(135deg) scaleX(0.42); }
+  100% { transform: rotateY(180deg) scaleX(0.001); }
+}
+/* La página nueva se revela desde el lomo, de forma inversa a la hoja */
+@keyframes revealNext { 0%, 35% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+@keyframes revealPrev { 0%, 35% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+/* Sombra que cae sobre la página de debajo mientras se hojea */
+@keyframes shadeUnder { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes leafShade { 0% { opacity: 0; } 50% { opacity: 0.4; } 100% { opacity: 0.15; } }
+
+/* Entradas y salidas de menú */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fadeOut { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes plainFadeOut { to { opacity: 0; } }
+@keyframes actionIn { from { opacity: 0; transform: translateX(-14px) scale(0.85); } to { opacity: 1; transform: none; } }
+@keyframes actionOut { to { opacity: 0; transform: translateY(-8px) scale(0.9); } }
+@keyframes pinIn { from { opacity: 0; transform: translateY(-22px); } to { opacity: 1; transform: none; } }
+@keyframes pinOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(18px); } }
+.anim-in { animation: fadeIn 550ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.anim-out { animation: fadeOut 320ms ease forwards; }
+.anim-fade-out { animation: plainFadeOut 500ms ease forwards; }
+
+/* Grano sutil para gradientes de portada */
+.grain {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>");
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+}
+
+:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; border-radius: 4px; }
+
+/* Durante un arrastre de manuales: cursor de agarre en toda la página */
+body.gbv-dragging, body.gbv-dragging * { cursor: grabbing !important; user-select: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
