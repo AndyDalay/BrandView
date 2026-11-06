@@ -6,3 +6,10 @@ const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
 export const supabaseReady = Boolean(url && key);
 export const supabase = supabaseReady ? createClient(url as string, key as string) : null;
+
+// Diagnóstico: solo indica si cada variable llega, nunca muestra su valor
+export const supabaseEnvStatus = {
+  url: Boolean(url),
+  key: Boolean(key),
+  mode: import.meta.env.MODE,
+};

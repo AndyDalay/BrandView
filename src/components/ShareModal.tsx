@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import type { Manual } from '../lib/gallery';
 import { getSession, publishManual, sendLoginLink, supabaseReady } from '../lib/share';
+import { supabaseEnvStatus } from '../lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () => void }) {
@@ -81,7 +82,12 @@ export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () =>
         </div>
 
         {!supabaseReady && (
-          <p className="text-sm text-terracota">Falta configurar Supabase (VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY).</p>
+          <div className="text-sm text-terracota">
+            <p>Falta configurar Supabase (VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY).</p>
+            <p className="mt-2 font-mono text-xs text-gris-txt-oscuro">
+              modo: {supabaseEnvStatus.mode} · URL: {supabaseEnvStatus.url ? 'ok' : 'falta'} · clave: {supabaseEnvStatus.key ? 'ok' : 'falta'}
+            </p>
+          </div>
         )}
 
         {supabaseReady && session === undefined && <p className="text-sm text-gris-txt">Comprobando sesión…</p>}
