@@ -40,6 +40,16 @@ export async function getSession() {
   return data.session;
 }
 
+// Sesión anónima automática: no pide correo. Supabase la crea la primera vez.
+export async function ensureSession() {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+  const existing = await getSession();
+  if (existing) return existing;
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (error) throw new Error(error.message);
+  return data.session;
+}
+
 export async function sendLoginLink(email: string) {
   if (!supabase) throw new Error('Supabase no está configurado.');
   const { error } = await supabase.auth.signInWithOtp({
@@ -52,8 +62,8 @@ export async function sendLoginLink(email: string) {
 // Sube las páginas al bucket y crea/actualiza la fila. Devuelve el enlace público.
 export async function publishManual(m: Manual, onProgress?: (p: number) => void): Promise<string> {
   if (!supabase) throw new Error('Supabase no está configurado.');
-  const session = await getSession();
-  if (!session) throw new Error('Inicia sesión para compartir.');
+  const session = await ensureSession();
+  if (!session) throw new Error('No se pudo iniciar la sesión para compartir.');
 
   const paths: string[] = [];
   for (let i = 0; i < m.paginas.length; i++) {

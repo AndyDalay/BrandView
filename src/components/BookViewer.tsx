@@ -43,28 +43,21 @@ function Leaf({
   back,
   className,
   style,
-  ms,
   onEnd,
 }: {
   front: string | null;
   back: string | null;
   className: string;
   style: CSSProperties;
-  ms: number;
   onEnd: (e: AnimationEvent<HTMLDivElement>) => void;
 }) {
-  const shade: CSSProperties = { animation: `leafShade ${ms}ms ease forwards` };
   return (
     <div className={`absolute z-20 ${className}`} style={{ transformStyle: 'preserve-3d', ...style }} onAnimationEnd={onEnd}>
       <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden' }}>
         <Paper src={front} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-black/10 to-transparent" />
-        <div className="pointer-events-none absolute inset-0 bg-black" style={shade} />
       </div>
       <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
         <Paper src={back} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/10 to-transparent" />
-        <div className="pointer-events-none absolute inset-0 bg-black" style={shade} />
       </div>
     </div>
   );
@@ -198,15 +191,18 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
               <Paper src={rightSrc} />
             </div>
           </div>
-          {/* Sombra del lomo: solo durante el giro, crece y se recoge con la hoja */}
-          {flip !== null && (
-            <div
-              key={`spine-${idx}-${flip}`}
-              className="pointer-events-none absolute inset-y-0 left-1/2 z-[15] w-16 bg-gradient-to-r from-transparent via-black/30 to-transparent"
-              style={{ animation: `spineShade ${ms}ms ${EASE} forwards` }}
-            />
-          )}
 
+          {/* Sombra central: en reposo es fija; durante el giro se recoge hacia el centro
+              cuando la hoja pasa el lomo y vuelve a expandirse por encima de la hoja al final */}
+          <div
+            key={`spine-${idx}-${flip ?? 'rest'}`}
+            className="pointer-events-none absolute inset-y-0 left-1/2 w-8 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/10 to-transparent"
+            style={
+              flip
+                ? { zIndex: 30, animation: `spineFold ${ms}ms ${EASE} forwards` }
+                : { zIndex: 10 }
+            }
+          />
 
           {/* Página nueva que aparece desde el lomo cuando la hoja se recoge */}
           {flip === 'next' && (
@@ -233,7 +229,6 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
               front={cur[1]}
               back={nextU?.[0] ?? null}
               style={anim('flipNext', 'left center')}
-              ms={ms}
               onEnd={onLeafEnd}
             />
           )}
@@ -244,7 +239,6 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
               front={cur[0]}
               back={prevU?.[1] ?? null}
               style={anim('flipPrev', 'right center')}
-              ms={ms}
               onEnd={onLeafEnd}
             />
           )}
@@ -266,7 +260,6 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
               front={cur[1]}
               back={nextU?.[1] ?? null}
               style={anim('flipNext', 'left center')}
-              ms={FLIP_MS}
               onEnd={onLeafEnd}
             />
           )}
