@@ -198,27 +198,21 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
               <Paper src={rightSrc} />
             </div>
           </div>
-          {both && <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-8 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/10 to-transparent" />}
+          {/* Sombra del lomo: solo durante el giro, crece y se recoge con la hoja */}
+          {flip !== null && (
+            <div
+              key={`spine-${idx}-${flip}`}
+              className="pointer-events-none absolute inset-y-0 left-1/2 z-[15] w-16 bg-gradient-to-r from-transparent via-black/30 to-transparent"
+              style={{ animation: `spineShade ${ms}ms ${EASE} forwards` }}
+            />
+          )}
 
-          {/* Sombra sobre la página de debajo mientras se levanta la hoja */}
-          {flip === 'next' && (
-            <div
-              className="pointer-events-none absolute inset-y-0 left-1/2 z-[5] w-1/2 bg-gradient-to-r from-black/35 to-transparent"
-              style={{ animation: `shadeUnder ${ms}ms ease forwards` }}
-            />
-          )}
-          {flip === 'prev' && (
-            <div
-              className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-1/2 bg-gradient-to-l from-black/35 to-transparent"
-              style={{ animation: `shadeUnder ${ms}ms ease forwards` }}
-            />
-          )}
 
           {/* Página nueva que aparece desde el lomo cuando la hoja se recoge */}
           {flip === 'next' && (
             <div
               className="absolute inset-y-0 left-0 z-[6] w-1/2"
-              style={{ transformOrigin: 'right center', animation: `revealNext ${ms}ms ${EASE} forwards` }}
+              style={{ animation: `revealClipNext ${ms}ms ${EASE} forwards` }}
             >
               <Paper src={nextU?.[0] ?? null} />
             </div>
@@ -226,7 +220,7 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
           {flip === 'prev' && (
             <div
               className="absolute inset-y-0 right-0 z-[6] w-1/2"
-              style={{ transformOrigin: 'left center', animation: `revealPrev ${ms}ms ${EASE} forwards` }}
+              style={{ animation: `revealClipPrev ${ms}ms ${EASE} forwards` }}
             >
               <Paper src={prevU?.[1] ?? null} />
             </div>

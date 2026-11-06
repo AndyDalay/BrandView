@@ -1,4 +1,5 @@
 import { listManuals, type StoredManual } from './db';
+import { loadRemote } from './share';
 
 export interface Manual {
   id: string;
@@ -91,16 +92,22 @@ function localToManual(m: StoredManual): Manual {
 }
 
 export async function loadGallery(): Promise<Gallery> {
-  const [res, locales] = await Promise.all([
+  const [res, locales, remotos] = await Promise.all([
     fetch('/galeria/manifest.json', { cache: 'no-store' }),
     listManuals().catch(() => [] as StoredManual[]),
+    loadRemote().catch(() => [] as Manual[]),
   ]);
   if (!res.ok) throw new Error('No se pudo leer la galería.');
   const base = (await res.json()) as Gallery;
   const ocultos = new Set(readList(OCULTOS_KEY));
-  const locals = [...locales].sort((a, b) => b.createdAt - a.createdAt).map(localToManual);
+  const remoteIds = new Set(remotos.map((m) => m.id));
+  // Un manual local ya compartido se muestra solo una vez (la versión remota)
+  const locals = [...locales]
+    .filter((l) => !remoteIds.has(l.id))
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .map(localToManual);
   return {
-    manuales: [...locals, ...base.manuales.filter((m) => !ocultos.has(m.id))],
+    manuales: [...remotos, ...locals, ...base.manuales.filter((m) => !ocultos.has(m.id))],
     ads: base.ads,
   };
 }

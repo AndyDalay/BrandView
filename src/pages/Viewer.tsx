@@ -7,6 +7,7 @@ import { BookViewer } from '../components/BookViewer';
 import { ActionsStagger } from '../components/ActionsStagger';
 import { ManualLoader } from '../components/ManualLoader';
 import { loadGallery, markSeen, type Gallery } from '../lib/gallery';
+import { ShareModal } from '../components/ShareModal';
 import { useTransition } from '../lib/transition';
 
 const MIN_LOADER_MS = 2000;
@@ -32,6 +33,7 @@ export function Viewer() {
   const [data, setData] = useState<Gallery | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [phase, setPhase] = useState<'loading' | 'fading' | 'ready'>('loading');
 
   useEffect(() => {
@@ -82,6 +84,11 @@ export function Viewer() {
       <Header>
         {ready && (
           <ActionsStagger exiting={exiting}>
+            {manual && (
+              <button onClick={() => setSharing(true)} aria-label="Compartir" title="Compartir" className={btn}>
+                <Icon icon="solar:share-linear" width={22} />
+              </button>
+            )}
             <button onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Activar sonido' : 'Silenciar'} className={btn}>
               <Icon icon={muted ? 'solar:volume-cross-linear' : 'solar:volume-loud-linear'} width={22} />
             </button>
@@ -98,6 +105,8 @@ export function Viewer() {
           </ActionsStagger>
         )}
       </Header>
+
+      {sharing && manual && <ShareModal manual={manual} onClose={() => setSharing(false)} />}
 
       {!ready ? (
         <div className="flex flex-1 flex-col">

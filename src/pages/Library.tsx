@@ -197,7 +197,7 @@ function PinCard({
         </div>
       </a>
 
-      {/* Borrar: sale por la derecha de la tarjeta al pasar el ratón; en táctil siempre visible */}
+      {/* Borrar: esquina superior derecha, pegada al borde; en táctil siempre visible */}
       <button
         type="button"
         title={manual.local ? 'Borrar manual' : 'Ocultar manual'}
@@ -208,7 +208,7 @@ function PinCard({
           e.stopPropagation();
           onDelete(manual);
         }}
-        className="absolute right-2 top-1/2 z-20 grid h-9 w-9 -translate-y-1/2 translate-x-3 place-items-center rounded-full bg-white text-terracota opacity-0 shadow-lg transition-all duration-200 ease-out hover:bg-terracota hover:text-white focus-visible:translate-x-0 focus-visible:opacity-100 group-hover:translate-x-0 group-hover:opacity-100 [@media(hover:none)]:translate-x-0 [@media(hover:none)]:opacity-100"
+        className="absolute right-0 top-0 z-20 grid h-9 w-9 place-items-center rounded-bl-xl rounded-tr-md bg-white text-terracota opacity-0 shadow-md transition-all duration-200 ease-out hover:bg-terracota hover:text-white focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
       >
         <Icon icon="solar:trash-bin-minimalistic-linear" width={18} />
       </button>
