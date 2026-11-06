@@ -88,3 +88,6 @@ export async function publishManual(m: Manual, onProgress?: (p: number) => void)
   if (error) throw new Error(error.message);
   return `${window.location.origin}/manual/${encodeURIComponent(m.id)}`;
 }
+export const supabaseReady = Boolean(
+  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+);
