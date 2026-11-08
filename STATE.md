@@ -357,3 +357,13 @@ Tarea de esta sesión: [descripción]
 
 ## Botón de voz en el panel (2026-11-08)
 - Se quitó el reproductor nativo del panel. "Leer en voz alta" reproduce la nota de voz original si el comentario tiene audio; si es solo texto, lee el texto con Web Speech.
+
+## T9 — Tests E2E de comentarios de texto (2026-11-08)
+- Archivo: `tests/e2e/comentarios.spec.ts`. Mockea PostgREST en memoria (`comentarios`, `perfiles`, `manuales`) y usa el manual local `ejemplo-marca`.
+- Casos: crear comentario y verlo tras recargar; panel con autor y texto; error del servidor sin lágrima.
+- Requiere `VITE_SUPABASE_URL` en `.env.local` (lo usa `seedSession`).
+- Estado: escrito, pendiente de ejecutar en Windows con `npx playwright test tests/e2e/comentarios.spec.ts --project=chromium`.
+
+## T8 — Revisión 360×800 (2026-11-08)
+- Archivo: `tests/e2e/movil.spec.ts`. Comprueba que la biblioteca y el visor no tienen scroll horizontal a 360 px y que el botón de comentarios y el de compartir se ven.
+- Pendiente: ejecutar en Windows con `npx playwright test tests/e2e/movil.spec.ts --project=chromium`. Si la cabecera del visor se desborda a 360 px, habrá que reducir los botones o pasarlos a un menú.
