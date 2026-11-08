@@ -348,3 +348,9 @@ Tarea de esta sesión: [descripción]
 ## Borrado de manual compartido y T7 (2026-11-08)
 - Borrado: el error ahora indica cuántos archivos se borraron de cuántos y el motivo de Storage. Diagnóstico en Supabase SQL: `select id, owner_id, nombre from manuales;` y `select policyname, cmd from pg_policies where schemaname='storage' and tablename='objects';`. Si `owner_id` no coincide con el id del usuario actual (Authentication → Users), la fila pertenece a otra sesión.
 - T7: botón "Leer en voz alta" en el panel del comentario (Web Speech API, es-ES), se calla al cerrar el panel o al desmontar la capa.
+
+## T8 — Accesibilidad y movimiento (parcial, 2026-11-08)
+- Lágrima y spinner respetan `prefers-reduced-motion` (`motion-reduce:`), también la onda y el punto de grabación.
+- Foco por teclado visible en lágrimas y papelera. El estado de transcripción se anuncia con `role="status"`.
+- Pendiente: revisión a 360×800 en navegador.
+- Limpieza del manual huérfano "ALTA" (owner de otra sesión): en el SQL Editor, `delete from storage.objects where bucket_id='manuales' and (storage.foldername(name))[1]='manual-alta';` y luego `delete from manuales where id='manual-alta';`.

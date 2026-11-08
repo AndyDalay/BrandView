@@ -271,7 +271,7 @@ export function CommentLayer({
               setAbierto(abierto === c.id ? null : c.id);
             }}
             style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%` }}
-            className={`pointer-events-auto absolute grid h-8 w-8 -translate-x-1/2 -translate-y-full -rotate-45 place-items-center overflow-hidden rounded-[50%_50%_50%_0] border-2 border-white text-white shadow-lg transition-transform hover:scale-110 ${problema ? 'bg-terracota' : 'bg-azul'}`}
+            className={`pointer-events-auto absolute grid h-8 w-8 -translate-x-1/2 -translate-y-full -rotate-45 place-items-center overflow-hidden rounded-[50%_50%_50%_0] border-2 border-white text-white shadow-lg transition-transform motion-reduce:transition-none hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-azul-dark ${problema ? 'bg-terracota' : 'bg-azul'}`}
           >
             <span className="flex h-full w-full rotate-45 items-center justify-center">
               {foto ? (
@@ -287,7 +287,7 @@ export function CommentLayer({
               )}
             </span>
             {enProceso(c) && !problema && (
-              <span data-testid="comment-pin-spinner" aria-hidden className="pointer-events-none absolute inset-0 animate-spin rounded-[50%] border-2 border-white/70 border-t-transparent" />
+              <span data-testid="comment-pin-spinner" aria-hidden className="pointer-events-none absolute inset-0 animate-spin motion-reduce:animate-none rounded-[50%] border-2 border-white/70 border-t-transparent" />
             )}
           </button>
         );
@@ -342,7 +342,7 @@ export function CommentLayer({
           )}
           {conProblema(seleccionado, fallos, enCurso) && (
             <div className="mt-3 text-sm">
-              <p data-testid="comment-status" className="text-terracota">
+              <p data-testid="comment-status" role="status" className="text-terracota">
                 {fallos[seleccionado.id] ??
                   (atascado(seleccionado)
                     ? 'La transcripción no respondió a tiempo.'
@@ -395,7 +395,7 @@ export function CommentLayer({
               title="Borrar comentario"
               onClick={() => borrar(seleccionado)}
               disabled={busy}
-              className="absolute bottom-2 right-2 grid h-8 w-8 place-items-center rounded-lg text-terracota opacity-0 transition-opacity hover:bg-azul-tint focus-visible:opacity-100 group-hover:opacity-100 disabled:opacity-40 [@media(hover:none)]:opacity-100"
+              className="absolute bottom-2 right-2 grid h-8 w-8 place-items-center rounded-lg text-terracota opacity-0 transition-opacity hover:bg-azul-tint focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-azul-dark group-hover:opacity-100 motion-reduce:transition-none disabled:opacity-40 [@media(hover:none)]:opacity-100"
             >
               <Icon icon="solar:trash-bin-minimalistic-linear" width={18} />
             </button>

@@ -161,13 +161,13 @@ export function GrabadorVoz({
         {niveles.map((n, i) => (
           <span
             key={i}
-            className="w-[3px] shrink-0 rounded-full bg-terracota transition-[height] duration-100"
+            className="w-[3px] shrink-0 rounded-full bg-terracota transition-[height] duration-100 motion-reduce:transition-none"
             style={{ height: `${Math.round(n * 26) + 3}px` }}
           />
         ))}
       </span>
       <span className="flex w-12 items-center gap-1 text-xs tabular-nums text-gris-txt-oscuro" data-testid="voice-timer">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-terracota" aria-hidden />
+        <span className="h-2 w-2 animate-pulse motion-reduce:animate-none rounded-full bg-terracota" aria-hidden />
         {mmss(segundos)}
       </span>
       <button
