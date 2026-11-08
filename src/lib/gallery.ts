@@ -12,6 +12,7 @@ export interface Manual {
   paginas: string[];
   nuevo?: boolean; // subido recientemente y aún no abierto
   local?: boolean; // subido desde esta app (IndexedDB), se puede borrar de verdad
+  remoto?: boolean; // compartido en Supabase; se borra de la BD y del Storage (solo el dueño)
 }
 
 export interface Gallery {

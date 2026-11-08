@@ -28,6 +28,21 @@
   --paper-edge: #D4DDEE;
 }
 
+/* Modo oscuro: gris carbón neutro. El azul de marca se mantiene como acento. */
+:root[data-theme="dark"] {
+  --azul-dark: #E6ECFF;
+  --azul-mid: #7FA0FF;
+  --azul-soft: #5C86F2;
+  --azul-tint: #1F2633;
+  --gris-bg: #15171C;
+  --gris-line: #2A303C;
+  --gris-txt: #98A2B3;
+  --gris-txt-oscuro: #C9D0DC;
+  --superficie: #1C2029;
+  --paper-bg: #1A1D24;
+  --paper-edge: #2A303C;
+}
+
 html { font-synthesis: none; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 
 body {
@@ -54,7 +69,7 @@ body {
 
 /* Ruido más marcado junto al header, desvanecido hacia abajo */
 .noise-top {
-  position: fixed; top: 72px; left: 0; right: 0; height: 200px; pointer-events: none; z-index: 0;
+  position: fixed; top: 0; left: 0; right: 0; height: 100vh; pointer-events: none; z-index: 1;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   opacity: 0.16; mix-blend-mode: multiply;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.5) 100%, transparent 100%);
@@ -69,6 +84,20 @@ body {
 }
 
 /* Hojear: la hoja gira sobre el lomo y se va recogiendo hacia él hasta desaparecer */
+/* Sombra de la hoja derecha: se desvanece al empezar el giro hacia la izquierda y aparece al final al volver */
+@keyframes shadowFadeOutNext {
+  0%   { opacity: var(--shadow-start); }
+  33%  { opacity: 0; }
+  80%  { opacity: 0; }
+  88%  { opacity: var(--shadow-end); }
+  100% { opacity: var(--shadow-end); }
+}
+@keyframes shadowFadeInPrev {
+  0%   { opacity: var(--shadow-start); }
+  80%  { opacity: var(--shadow-start); }
+  88%  { opacity: var(--shadow-end); }
+  100% { opacity: var(--shadow-end); }
+}
 @keyframes flipNext {
   0%   { transform: rotateY(0deg); }
   100% { transform: rotateY(-180deg); }
@@ -112,6 +141,16 @@ body {
 
 /* Durante un arrastre de manuales: cursor de agarre en toda la página */
 body.gbv-dragging, body.gbv-dragging * { cursor: grabbing !important; user-select: none !important; }
+
+/* Modo oscuro: superficies blancas fijas de Tailwind pasan a la superficie oscura */
+:root[data-theme="dark"] .bg-white { background-color: var(--superficie) !important; }
+:root[data-theme="dark"] .bg-white\/60 { background-color: rgb(28 32 41 / 0.6) !important; }
+:root[data-theme="dark"] .bg-white\/80 { background-color: rgb(28 32 41 / 0.85) !important; }
+:root[data-theme="dark"] .bg-azul-dark\/35 { background-color: rgb(0 0 0 / 0.55) !important; }
+:root[data-theme="dark"] .text-azul-dark\/70 { color: rgb(201 208 220 / 0.7) !important; }
+:root[data-theme="dark"] .bg-paper-bg { background-color: var(--gris-bg) !important; }
+:root[data-theme="dark"] .text-white { color: #ffffff !important; }
+:root[data-theme="dark"] .bg-azul { color: #ffffff; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }

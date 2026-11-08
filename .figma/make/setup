@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+NODE_VERSION="$(node --version 2>/dev/null || echo none)"
+[ "$NODE_VERSION" = "none" ] && brew install node
+echo "Node $(node --version) OK"

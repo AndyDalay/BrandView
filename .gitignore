@@ -7,3 +7,6 @@ dist
 
 .vercel
 .env*
+playwright-report
+test-results
+.env.test

@@ -50,13 +50,41 @@ export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () =>
 
   const text = shareText(manual.nombre, link ?? undefined);
   const channels = [
-    { label: 'WhatsApp', icon: 'solar:chat-round-dots-linear', href: `https://wa.me/?text=${encodeURIComponent(text)}` },
+    { label: 'WhatsApp', icon: 'solar:chat-round-dots-linear', href: `whatsapp://send?text=${encodeURIComponent(text)}` },
     { label: 'Telegram', icon: 'solar:plain-2-linear', href: `https://t.me/share/url?url=${encodeURIComponent(link ?? '')}&text=${encodeURIComponent(shareText(manual.nombre))}` },
     { label: 'Correo', icon: 'solar:letter-linear', href: `mailto:?subject=${encodeURIComponent('Manual: ' + manual.nombre)}&body=${encodeURIComponent(text)}` },
   ];
 
+  // WhatsApp: en móvil abre la app; en escritorio usa la pestaña de WhatsApp Web ya abierta
+  // (ventana con nombre fija) y deja el texto copiado para pegarlo tras elegir el chat.
+  const [waNotice, setWaNotice] = useState<string | null>(null);
+  const shareWhatsApp = async () => {
+    if (!link) return;
+    const movil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (movil) {
+      // Si la app no está instalada, el deep link no hace nada: tras 1,5 s abrimos wa.me
+      const fallback = window.setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        }
+      }, 1500);
+      const onHide = () => window.clearTimeout(fallback);
+      document.addEventListener('visibilitychange', onHide, { once: true });
+      window.location.href = channels[0].href;
+      return;
+    }
+    try {
+      await navigator.clipboard?.writeText(text);
+      setWaNotice('Texto copiado: elige el chat en WhatsApp Web y pega con Ctrl+V.');
+    } catch {
+      setWaNotice('Elige el chat en WhatsApp Web y pega el enlace que copiaste.');
+    }
+    window.open('https://web.whatsapp.com/', 'gbv-whatsapp');
+  };
+
   return (
     <div
+      data-testid="share-modal"
       className="fixed inset-0 z-50 grid place-items-center bg-azul-dark/35 p-4 backdrop-blur-sm"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -66,7 +94,7 @@ export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () =>
             <h2 className="font-display text-2xl text-azul-dark">Compartir manual</h2>
             <p className="mt-1 text-sm text-gris-txt-oscuro">«{manual.nombre}» estará disponible para quien tenga el enlace.</p>
           </div>
-          <button onClick={onClose} aria-label="Cerrar" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gris-txt-oscuro hover:bg-azul-tint">
+          <button onClick={onClose} aria-label="Cerrar" data-testid="share-close" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gris-txt-oscuro hover:bg-azul-tint">
             <Icon icon="solar:close-circle-linear" width={22} />
           </button>
         </div>
@@ -81,9 +109,9 @@ export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () =>
         )}
 
         {supabaseReady && !link && !error && (
-          <div>
+          <div className="mb-4 flex h-[60px] flex-col justify-center rounded-lg border border-gris-line bg-gris-bg/60 px-3">
             <p className="font-label text-xs tracking-[0.16em] text-azul-dark">PREPARANDO ENLACE…</p>
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gris-bg">
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white">
               <div className="h-full rounded-full bg-azul transition-[width] duration-300" style={{ width: `${Math.max(6, Math.round(progress * 100))}%` }} />
             </div>
           </div>
@@ -99,7 +127,7 @@ export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () =>
         {/* Enlace: visible cuando está listo */}
         {link && (
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-gris-line bg-gris-bg/60 p-2">
-            <input readOnly value={link} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none" />
+            <input data-testid="share-link" readOnly value={link} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none" />
             <button onClick={copy} className="shrink-0 rounded-md bg-white px-3 py-1.5 text-sm text-azul-dark shadow hover:bg-azul-tint">
               {copied ? '¡Copiado!' : 'Copiar'}
             </button>
@@ -107,12 +135,18 @@ export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () =>
         )}
 
         {/* Botones de compartir: visibles desde el inicio, activos cuando el enlace está listo */}
+        {waNotice && <p role="status" className="mb-3 text-xs text-gris-txt-oscuro">{waNotice}</p>}
+
         <div className="grid grid-cols-3 gap-2">
           {channels.map((c) => (
             <button
-              key={c.label}
+              key={c.label} data-testid={`share-${c.label.toLowerCase()}`}
               disabled={!link}
-              onClick={() => link && window.open(c.href, '_blank', 'noopener,noreferrer')}
+              onClick={() => {
+                if (!link) return;
+                if (c.label === 'WhatsApp') void shareWhatsApp();
+                else window.open(c.href, '_blank', 'noopener,noreferrer');
+              }}
               className="flex flex-col items-center gap-1 rounded-lg bg-gris-bg/60 px-2 py-3 text-xs text-azul-dark hover:bg-azul-tint disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Icon icon={c.icon} width={22} />

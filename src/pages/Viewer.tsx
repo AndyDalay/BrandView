@@ -8,13 +8,15 @@ import { ActionsStagger } from '../components/ActionsStagger';
 import { ManualLoader } from '../components/ManualLoader';
 import { loadGallery, markSeen, type Gallery } from '../lib/gallery';
 import { ShareModal } from '../components/ShareModal';
-import { useTransition } from '../lib/transition';
+import { CommentLayer } from '../components/CommentLayer';
+import { useTransition } from '../lib/useTransition';
 
 const MIN_LOADER_MS = 2000;
 const FADE_MS = 500;
+const PRELOAD_TIMEOUT_MS = 5000;
 
 function preloadImages(urls: string[]) {
-  return Promise.all(
+  const load = Promise.all(
     urls.map(
       (u) =>
         new Promise<void>((resolve) => {
@@ -25,6 +27,10 @@ function preloadImages(urls: string[]) {
         })
     )
   );
+  const timeout = new Promise<void>((resolve) => {
+    window.setTimeout(resolve, PRELOAD_TIMEOUT_MS);
+  });
+  return Promise.race([load, timeout]);
 }
 
 export function Viewer() {
@@ -34,6 +40,7 @@ export function Viewer() {
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [colocando, setColocando] = useState(false); // modo comentar: un clic en el libro añade un comentario
   const [phase, setPhase] = useState<'loading' | 'fading' | 'ready'>('loading');
 
   useEffect(() => {
@@ -84,19 +91,32 @@ export function Viewer() {
       <Header>
         {ready && (
           <ActionsStagger exiting={exiting}>
+            {manual?.remoto && (
+              <button
+                onClick={() => setColocando((c) => !c)}
+                aria-label="Comentarios"
+                aria-pressed={colocando}
+                title={colocando ? 'Salir del modo comentario' : 'Comentarios'}
+                data-testid="comment-toggle-button"
+                className={`${btn} ${colocando ? 'bg-azul text-white hover:bg-azul-mid' : ''}`}
+              >
+                <Icon icon="solar:chat-round-linear" width={22} />
+              </button>
+            )}
             {manual && (
-              <button onClick={() => setSharing(true)} aria-label="Compartir" title="Compartir" className={btn}>
+              <button onClick={() => setSharing(true)} aria-label="Compartir" title="Compartir" data-testid="share-button" className={btn}>
                 <Icon icon="solar:share-linear" width={22} />
               </button>
             )}
-            <button onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Activar sonido' : 'Silenciar'} className={btn}>
+            <button onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Activar sonido' : 'Silenciar'} data-testid="sound-toggle" className={btn}>
               <Icon icon={muted ? 'solar:volume-cross-linear' : 'solar:volume-loud-linear'} width={22} />
             </button>
-            <button onClick={toggleFullscreen} aria-label="Pantalla completa" className={btn}>
+            <button onClick={toggleFullscreen} aria-label="Pantalla completa" data-testid="fullscreen-button" className={btn}>
               <Icon icon="solar:maximize-linear" width={22} />
             </button>
             <button
               onClick={() => go('/', 350)}
+              data-testid="back-button"
               className="ml-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gris-txt-oscuro hover:bg-azul-tint"
             >
               <Icon icon="solar:arrow-left-linear" width={20} />
@@ -131,8 +151,11 @@ export function Viewer() {
                 >
                   {manual.nombre}
                 </h1>
-                <div className={enterCls} style={exiting ? undefined : { animationDelay: '320ms' }}>
+                <div className={`relative ${enterCls}`} style={exiting ? undefined : { animationDelay: '320ms' }}>
                   <BookViewer pages={manual.paginas} ratio={manual.paginaW / manual.paginaH} muted={muted} />
+                  {manual.remoto && (
+                    <CommentLayer manualId={manual.id} modo={colocando} onSalirModo={() => setColocando(false)} />
+                  )}
                 </div>
               </>
             )}

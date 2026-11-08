@@ -31,7 +31,36 @@ export async function loadRemote(): Promise<Manual[]> {
     paginaH: r.pagina_h as number,
     paginas: (r.paginas as string[]).map(pub),
     local: false,
+    remoto: true,
   }));
+}
+
+// Borra un manual compartido: primero los archivos del Storage, luego la fila.
+// Solo el dueño puede hacerlo (RLS: 0002 y 0005). Si el Storage falla, la fila no se borra.
+export async function deleteSharedManual(id: string): Promise<void> {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+  const { data: row, error: readError } = await supabase
+    .from('manuales')
+    .select('portada, paginas')
+    .eq('id', id)
+    .maybeSingle();
+  if (readError) throw new Error(readError.message);
+  if (!row) return; // ya no existe
+
+  const paths = [row.portada as string, ...((row.paginas as string[]) ?? [])].filter(Boolean);
+  const unique = [...new Set(paths)];
+  if (unique.length > 0) {
+    // Sin la política de borrado (0005) Storage responde sin error y no borra nada:
+    // por eso se cuentan los archivos realmente eliminados.
+    const { data: removed, error: storageError } = await supabase.storage.from(BUCKET).remove(unique);
+    if (storageError || (removed?.length ?? 0) < unique.length) {
+      throw new Error('No se pudieron borrar los archivos. El manual no se ha borrado.');
+    }
+  }
+
+  const { data: deleted, error } = await supabase.from('manuales').delete().eq('id', id).select('id');
+  if (error) throw new Error(error.message);
+  if (!deleted || deleted.length === 0) throw new Error('No tienes permiso para borrar este manual.');
 }
 
 export async function getSession() {

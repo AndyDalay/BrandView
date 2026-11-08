@@ -7,7 +7,11 @@ type Spread = [string | null, string | null];
 type Flip = 'next' | 'prev' | null;
 
 const FLIP_MS = 800;
-const SLOW_MS = 1150; // portada y contraportada: más lento y el libro se desplaza
+const SLOW_MS = 1150;
+const HOLD_DELAY_MS = 350; // tiempo pulsado antes de empezar a pasar páginas
+const HOLD_RAMP_MS = 1500; // tras este tiempo pulsado, el giro se acelera
+const HOLD_FAST_MS = 360;
+const HOLD_FASTEST_MS = 240; // portada y contraportada: más lento y el libro se desplaza
 const EASE = 'cubic-bezier(0.645, 0.045, 0.355, 1)';
 
 /**
@@ -21,7 +25,8 @@ function buildSpreads(pages: string[]): Spread[] {
   const portada = pages[0];
   const contra = pages.length >= 2 ? pages[pages.length - 1] : null;
   const interior: (string | null)[] = pages.slice(1, contra ? -1 : undefined);
-  if (interior.length % 2) interior.push(null); // página en blanco para cerrar pares
+  // Si las páginas interiores son impares, la contraportada ocupa el hueco de la última doble página
+  if (interior.length % 2) interior.push(contra);
 
   const out: Spread[] = [[null, portada]];
   for (let i = 0; i < interior.length; i += 2) out.push([interior[i], interior[i + 1]]);
@@ -85,6 +90,26 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
 
   const [idx, setIdx] = useState(0);
   const [flip, setFlip] = useState<Flip>(null);
+  const [flipMs, setFlipMs] = useState(FLIP_MS);
+  const [holdDir, setHoldDir] = useState<'next' | 'prev' | null>(null);
+  const [holdFast, setHoldFast] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const holdTimer = useRef<number | null>(null);
+  const heldRef = useRef(false); // evita que el clic que sigue a mantener pulsado pase otra página
+
+  // Duración de cada giro: portada/contraportada lentas; mientras se mantiene pulsado, más rápidas
+  const durationFor = useCallback(
+    (dir: 'next' | 'prev') => {
+      if (isDesktop) {
+        const isSlow = dir === 'next' ? idx === 0 || idx + 1 === count - 1 : idx === count - 1 || idx - 1 === 0;
+        if (isSlow) return SLOW_MS;
+      }
+      if (holdDir) return holdFast ? HOLD_FASTEST_MS : HOLD_FAST_MS;
+      return FLIP_MS;
+    },
+    [isDesktop, idx, count, holdDir, holdFast]
+  );
 
   useEffect(() => {
     setIdx(0);
@@ -103,8 +128,7 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
   const canPrev = idx > 0 && flip === null;
 
   // Apertura y cierre del libro: giro más lento
-  const slow = flip !== null && (flip === 'next' ? idx === 0 || idx + 1 === count - 1 : idx === count - 1 || idx - 1 === 0);
-  const ms = isDesktop && slow ? SLOW_MS : FLIP_MS;
+  const ms = flip !== null ? flipMs : FLIP_MS;
 
   // Posición visual del libro: cerrado por delante → centrado en la portada; cerrado por detrás → centrado en la contraportada
   const visual = flip === 'next' ? idx + 1 : flip === 'prev' ? idx - 1 : idx;
@@ -113,15 +137,83 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
   const goNext = useCallback(() => {
     if (!canNext) return;
     if (!muted) playFlipSound();
+    setFlipMs(durationFor('next'));
     setFlip('next');
-  }, [canNext, muted]);
+  }, [canNext, muted, durationFor]);
 
   const goPrev = useCallback(() => {
     if (!canPrev) return;
     if (!muted) playFlipSound();
-    if (isDesktop) setFlip('prev');
-    else setIdx((i) => i - 1);
-  }, [canPrev, muted, isDesktop]);
+    if (isDesktop) {
+      setFlipMs(durationFor('prev'));
+      setFlip('prev');
+    } else setIdx((i) => i - 1);
+  }, [canPrev, muted, isDesktop, durationFor]);
+
+  // Mantener pulsado: al cumplir el tiempo, pasa páginas al terminar cada giro
+  useEffect(() => {
+    if (!holdDir) {
+      setHoldFast(false);
+      return;
+    }
+    const t = window.setTimeout(() => setHoldFast(true), HOLD_RAMP_MS);
+    return () => window.clearTimeout(t);
+  }, [holdDir]);
+
+  useEffect(() => {
+    if (!holdDir || flip !== null) return;
+    const pause = isDesktop ? 40 : holdFast ? 180 : 320; // en móvil no hay giro: la pausa marca el ritmo
+    const t = window.setTimeout(() => {
+      if (holdDir === 'next') goNext();
+      else goPrev();
+    }, pause);
+    return () => window.clearTimeout(t);
+  }, [holdDir, flip, idx, holdFast, isDesktop, goNext, goPrev]);
+
+  const stopHold = useCallback(() => {
+    if (holdTimer.current !== null) {
+      window.clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+    setHoldDir(null);
+  }, []);
+
+  const startHold = (dir: 'next' | 'prev') => (e: ReactPointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    heldRef.current = false;
+    holdTimer.current = window.setTimeout(() => {
+      holdTimer.current = null;
+      heldRef.current = true;
+      setHoldDir(dir);
+    }, HOLD_DELAY_MS);
+  };
+
+  const clickPrev = () => {
+    if (heldRef.current) {
+      heldRef.current = false;
+      return;
+    }
+    goPrev();
+  };
+  const clickNext = () => {
+    if (heldRef.current) {
+      heldRef.current = false;
+      return;
+    }
+    goNext();
+  };
+
+  // Número de página editable: tocar "3 / 8" permite escribir la página
+  const startEdit = () => {
+    if (flip !== null) return;
+    setDraft(String(idx + 1));
+    setEditing(true);
+  };
+  const commitEdit = () => {
+    const n = Number.parseInt(draft, 10);
+    if (Number.isFinite(n)) setIdx(Math.min(Math.max(1, n), count) - 1);
+    setEditing(false);
+  };
 
   // Fin de la animación de la hoja: confirmar el cambio de página
   const onLeafEnd = (e: AnimationEvent<HTMLDivElement>) => {
@@ -134,6 +226,7 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
   // Teclado
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement | null)?.tagName === 'INPUT') return;
       if (e.key === 'ArrowRight') goNext();
       if (e.key === 'ArrowLeft') goPrev();
     };
@@ -169,10 +262,60 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
   const rightSrc = flip === 'next' ? nextU?.[1] ?? null : cur[1];
   const leftOn = leftSrc !== null || flip !== null;
   const rightOn = rightSrc !== null || flip !== null;
-  const both = leftOn && rightOn;
+  // Franja central y sombras solo cuando hay una página real en cada lado (no durante aperturas/cierres vacíos)
+  const rightPaper = rightSrc !== null;
+
+  // Solo los giros que tocan la portada o la contraportada animan la sombra; los centrales la mantienen fija
+  const targetIdx = flip === 'next' ? idx + 1 : flip === 'prev' ? idx - 1 : idx;
+  const isEdgeFlip = flip !== null && (idx === 0 || idx === count - 1 || targetIdx === 0 || targetIdx === count - 1);
+
+  // Sombra de la mitad derecha: en 'next' se desvanece en el primer 15 % del giro y reaparece en el último 5 %
+  // (lo que llega a la derecha); en 'prev' no aparece hasta el último 5 %. Los extremos coinciden con el reposo.
+  const rightShadowStyle = {
+    '--shadow-start': (flip === 'next' ? cur[1] !== null : rightPaper) ? 1 : 0,
+    '--shadow-end': (flip === 'next' ? nextU?.[1] : flip === 'prev' ? prevU?.[1] : cur[1]) ? 1 : 0,
+    animation: isEdgeFlip
+      ? flip === 'next'
+        ? `shadowFadeOutNext ${ms}ms linear forwards`
+        : `shadowFadeInPrev ${ms}ms linear forwards`
+      : undefined,
+    opacity: isEdgeFlip ? undefined : rightSrc !== null ? 1 : 0,
+  } as CSSProperties;
+
+  // Franja central (lomo): siempre montada. Si la página que llega tiene dos lados, aparece en el último
+  // tramo del aterrizaje (80–88 %); si la que sale no los tenía, se desvanece al empezar el giro.
+  const tgtUnit = units[targetIdx] ?? [null, null];
+  const spineStart = cur[0] !== null && cur[1] !== null ? 1 : 0;
+  const spineEnd = tgtUnit[0] !== null && tgtUnit[1] !== null ? 1 : 0;
+  const spineChanges = flip !== null && isEdgeFlip && spineStart !== spineEnd;
+  const spineStyle = {
+    zIndex: flip !== null ? 30 : 10,
+    '--shadow-start': spineStart,
+    '--shadow-end': spineEnd,
+    animation: spineChanges
+      ? spineEnd > spineStart
+        ? `shadowFadeInPrev ${ms}ms linear forwards`
+        : `shadowFadeOutNext ${ms}ms linear forwards`
+      : undefined,
+    opacity: spineChanges ? undefined : spineStart,
+  } as CSSProperties;
+
+  // Sombra de la mitad izquierda: al avanzar aparece en el último 5 % del aterrizaje;
+  // al retroceder se desvanece en el primer 15 % (igual que la derecha, pero en el lado opuesto)
+  const has = (x: string | null | undefined) => (x ? 1 : 0);
+  const leftShadowStyle = {
+    '--shadow-start': has(cur[0]),
+    '--shadow-end': has(flip === 'next' ? nextU?.[0] : flip === 'prev' ? prevU?.[0] : cur[0]),
+    animation: isEdgeFlip
+      ? flip === 'next'
+        ? `shadowFadeInPrev ${ms}ms linear forwards`
+        : `shadowFadeOutNext ${ms}ms linear forwards`
+      : undefined,
+    opacity: isEdgeFlip ? undefined : has(leftSrc),
+  } as CSSProperties;
 
   return (
-    <div className="flex w-full flex-col items-center">
+    <div data-testid="book-viewer" className="flex w-full flex-col items-center">
       {isDesktop ? (
         <div
           className="relative mx-auto"
@@ -183,25 +326,27 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
             transition: `transform ${ms}ms ${EASE}`,
           }}
         >
-          <div className={`absolute inset-0 flex ${both ? 'shadow-book' : ''}`}>
-            <div className={`relative h-full w-1/2 ${leftOn ? '' : 'opacity-0'} ${!both && leftOn ? 'shadow-book' : ''}`}>
+          <div className="absolute inset-0 flex">
+            <div className={`relative h-full w-1/2 ${leftOn ? '' : 'opacity-0'}`}>
               <Paper src={leftSrc} />
             </div>
-            <div className={`relative h-full w-1/2 ${rightOn ? '' : 'opacity-0'} ${!both && rightOn ? 'shadow-book' : ''}`}>
+            <div className={`relative h-full w-1/2 ${rightPaper ? '' : 'opacity-0'}`}>
               <Paper src={rightSrc} />
             </div>
           </div>
 
+          {/* Sombra de la hoja izquierda (se anima con el giro) */}
+          <div aria-hidden className="shadow-book pointer-events-none absolute inset-y-0 left-0 w-1/2" style={leftShadowStyle} />
+
+          {/* Sombra de la hoja derecha (se anima con el giro) */}
+          <div aria-hidden className="shadow-book pointer-events-none absolute inset-y-0 right-0 w-1/2" style={rightShadowStyle} />
+
           {/* Sombra central: en reposo es fija; durante el giro se recoge hacia el centro
               cuando la hoja pasa el lomo y vuelve a expandirse por encima de la hoja al final */}
           <div
-            key={`spine-${idx}-${flip ?? 'rest'}`}
+            aria-hidden
             className="pointer-events-none absolute inset-y-0 left-1/2 w-8 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/10 to-transparent"
-            style={
-              flip
-                ? { zIndex: 30, animation: `spineFold ${ms}ms ${EASE} forwards` }
-                : { zIndex: 10 }
-            }
+            style={spineStyle}
           />
 
           {/* Página nueva que aparece desde el lomo cuando la hoja se recoge */}
@@ -268,20 +413,56 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
 
       <div className="mt-8 flex items-center gap-5">
         <button
-          onClick={goPrev}
+          onPointerDown={startHold('prev')}
+          onPointerUp={stopHold}
+          onPointerLeave={stopHold}
+          onPointerCancel={stopHold}
+          onClick={clickPrev}
+          onContextMenu={(e) => e.preventDefault()}
           disabled={!canPrev}
-          aria-label="Página anterior"
+          aria-label="Página anterior" data-testid="prev-page"
           className="grid h-11 w-11 place-items-center rounded-full bg-white text-azul-dark shadow hover:bg-azul-tint disabled:opacity-40"
         >
           <Icon icon="solar:alt-arrow-left-linear" width={22} />
         </button>
-        <span className="min-w-[70px] text-center font-label text-xs tracking-[0.16em] text-gris-txt-oscuro tnum">
-          {idx + 1} / {count}
-        </span>
+        {editing ? (
+          <input
+            data-testid="page-input"
+            type="number"
+            min={1}
+            max={count}
+            value={draft}
+            autoFocus
+            aria-label="Ir a la página"
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitEdit();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+            className="w-20 rounded-md border border-gris-line bg-white px-2 py-1 text-center font-label text-xs tracking-[0.16em] text-azul-dark tnum outline-none focus:border-azul"
+          />
+        ) : (
+          <button
+            type="button"
+            data-testid="page-indicator"
+            onClick={startEdit}
+            aria-label="Ir a una página"
+            title="Tocar para escribir la página"
+            className="min-w-[70px] rounded-md px-2 py-1 text-center font-label text-xs tracking-[0.16em] text-gris-txt-oscuro hover:bg-azul-tint tnum"
+          >
+            {idx + 1} / {count}
+          </button>
+        )}
         <button
-          onClick={goNext}
+          onPointerDown={startHold('next')}
+          onPointerUp={stopHold}
+          onPointerLeave={stopHold}
+          onPointerCancel={stopHold}
+          onClick={clickNext}
+          onContextMenu={(e) => e.preventDefault()}
           disabled={!canNext}
-          aria-label="Página siguiente"
+          aria-label="Página siguiente" data-testid="next-page"
           className="grid h-11 w-11 place-items-center rounded-full bg-white text-azul-dark shadow hover:bg-azul-tint disabled:opacity-40"
         >
           <Icon icon="solar:alt-arrow-right-linear" width={22} />

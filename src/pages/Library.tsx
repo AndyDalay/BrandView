@@ -5,8 +5,10 @@ import { ActionsStagger } from '../components/ActionsStagger';
 import { AddManualModal } from '../components/AddManualModal';
 import { HorizontalMasonry, type Pin, type PlacedPin } from '../components/HorizontalMasonry';
 import { deleteManual } from '../lib/db';
+import { deleteSharedManual } from '../lib/share';
 import { getOrden, hideManual, loadGallery, ordenar, saveOrden, type Gallery, type Manual } from '../lib/gallery';
-import { useTransition } from '../lib/transition';
+import { useTransition } from '../lib/useTransition';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 
 const PIN_EXIT_MS = 1400; // tiempo que tardan los manuales en caer + limpiar textos
 
@@ -14,14 +16,22 @@ function laneHeight() {
   return Math.max(280, Math.round(window.innerHeight * 0.67));
 }
 
+// Mismo margen lateral que los textos (px-5 en móvil, md:px-10 en escritorio)
+function gutterPx() {
+  return window.innerWidth >= 768 ? 40 : 20;
+}
+
 export function Library() {
   const { exiting, go } = useTransition();
   const [data, setData] = useState<Gallery | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lane, setLane] = useState(laneHeight);
+  const [inset, setInset] = useState(gutterPx);
   const [adding, setAdding] = useState(false);
   const [intro, setIntro] = useState(true);
   const [orden, setOrden] = useState<string[]>(getOrden);
+  const [pendingDelete, setPendingDelete] = useState<Manual | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const reload = useCallback(() => {
     loadGallery()
@@ -34,7 +44,10 @@ export function Library() {
   }, [reload]);
 
   useEffect(() => {
-    const onResize = () => setLane(laneHeight());
+    const onResize = () => {
+      setLane(laneHeight());
+      setInset(gutterPx());
+    };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -56,25 +69,33 @@ export function Library() {
     saveOrden(ids);
   }, []);
 
-  const handleDelete = useCallback(
+  // La papelera abre el modal de confirmación propio de la app
+  const handleDelete = useCallback((m: Manual) => setPendingDelete(m), []);
+
+  const performDelete = useCallback(
     async (m: Manual) => {
-      const msg = m.local
-        ? `¿Borrar «${m.nombre}»? Se eliminará de este navegador y no se puede deshacer.`
-        : `¿Ocultar «${m.nombre}» de la galería?`;
-      if (!window.confirm(msg)) return;
+      setDeleting(true);
       try {
         if (m.local) await deleteManual(m.id);
+        else if (m.remoto) await deleteSharedManual(m.id);
         else hideManual(m.id);
         const next = orden.filter((id) => id !== m.id);
         setOrden(next);
         saveOrden(next);
         reload();
-      } catch {
-        setError('No se pudo borrar el manual.');
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'No se pudo borrar el manual.');
+      } finally {
+        setDeleting(false);
+        setPendingDelete(null);
       }
     },
     [orden, reload]
   );
+
+  const cancelDelete = useCallback(() => {
+    if (!deleting) setPendingDelete(null);
+  }, [deleting]);
 
   const open = (m: Manual) => go(`/manual/${encodeURIComponent(m.id)}`, PIN_EXIT_MS);
 
@@ -87,16 +108,18 @@ export function Library() {
         <ActionsStagger exiting={exiting}>
           <button
             onClick={() => setAdding(true)}
+            data-testid="add-manual-button"
             className="flex items-center gap-2 rounded-lg bg-azul px-4 py-2 text-sm text-white shadow hover:bg-azul-mid"
           >
             <Icon icon="solar:add-circle-linear" width={20} />
+            <span className="sm:hidden">Añadir</span>
             <span className="hidden sm:inline">Añadir manual</span>
           </button>
         </ActionsStagger>
       </Header>
 
 
-      <main className="relative z-10 w-full px-5 py-10 md:px-10">
+      <main data-testid="library-page" className="relative z-10 w-full px-5 py-10 md:px-10">
         <div className={textCls} style={textDelay}>
           <h1 className="font-display text-3xl text-azul-dark md:text-4xl">Manuales de marca</h1>
           <p className="mt-2 text-gris-txt-oscuro">
@@ -113,10 +136,11 @@ export function Library() {
         </div>
 
         {pins.length > 0 && (
-          <div className="mt-8">
+          <div className="-mx-5 mt-8 md:-mx-10" data-testid="gallery">
             <HorizontalMasonry
               pins={pins}
               height={lane}
+              inset={inset}
               exiting={exiting}
               intro={intro}
               onMove={handleMove}
@@ -133,6 +157,16 @@ export function Library() {
           </div>
         )}
       </main>
+
+      {pendingDelete && (
+        <ConfirmDeleteModal
+          nombre={pendingDelete.nombre}
+          tipo={pendingDelete.local ? 'local' : pendingDelete.remoto ? 'remoto' : 'base'}
+          busy={deleting}
+          onCancel={cancelDelete}
+          onConfirm={() => performDelete(pendingDelete)}
+        />
+      )}
 
       {adding && (
         <AddManualModal
@@ -159,8 +193,10 @@ function PinCard({
   onDelete: (m: Manual) => void;
 }) {
   return (
-    <div className="group relative h-full w-full">
+    <div className="group relative h-full w-full transition-transform duration-300 ease-out hover:-translate-y-2">
       <a
+        data-testid="manual-card"
+        data-manual-id={manual.id}
         href={`/manual/${encodeURIComponent(manual.id)}`}
         draggable={false}
         onClick={(e) => {
@@ -169,7 +205,7 @@ function PinCard({
         }}
         className="block h-full w-full"
       >
-        <div className="relative h-full w-full rounded-md transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:shadow-[0_22px_44px_-16px_rgba(18,34,79,0.55)]">
+        <div className="relative h-full w-full rounded-md transition-shadow duration-300 ease-out group-hover:shadow-[0_22px_44px_-16px_rgba(18,34,79,0.55)]">
           <img
             src={manual.portada}
             alt={`Portada ${manual.nombre}`}
@@ -200,8 +236,9 @@ function PinCard({
       {/* Borrar: esquina superior derecha, pegada al borde; en táctil siempre visible */}
       <button
         type="button"
-        title={manual.local ? 'Borrar manual' : 'Ocultar manual'}
-        aria-label={`${manual.local ? 'Borrar' : 'Ocultar'} ${manual.nombre}`}
+        data-testid="manual-delete"
+        title={manual.local || manual.remoto ? 'Borrar manual' : 'Ocultar manual'}
+        aria-label={`${manual.local || manual.remoto ? 'Borrar' : 'Ocultar'} ${manual.nombre}`}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.preventDefault();

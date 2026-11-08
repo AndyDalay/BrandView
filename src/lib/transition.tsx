@@ -1,12 +1,6 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-interface TransitionCtx {
-  exiting: boolean;
-  go: (to: string, ms?: number) => void;
-}
-
-const Ctx = createContext<TransitionCtx>({ exiting: false, go: () => {} });
+import { Ctx } from './transitionContext';
 
 // Navegación con animación de salida: la página actual se limpia y luego cambia de ruta.
 export function TransitionProvider({ children }: { children: ReactNode }) {
@@ -29,8 +23,4 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
   );
 
   return <Ctx.Provider value={{ exiting, go }}>{children}</Ctx.Provider>;
-}
-
-export function useTransition() {
-  return useContext(Ctx);
 }

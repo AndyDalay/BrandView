@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+MAX=120; EL=0
+while [ $EL -lt $MAX ]; do
+  curl -sf http://localhost:3000/ >/dev/null 2>&1 && echo "Server ready" && exit 0
+  sleep 2; EL=$((EL+2))
+done
+echo Timeout; exit 1

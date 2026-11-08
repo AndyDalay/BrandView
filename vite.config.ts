@@ -26,4 +26,14 @@ function galleryManifest(): Plugin {
   };
 }
 
-export default defineConfig({ plugins: [react(), galleryManifest()] });
+export default defineConfig({
+  plugins: [react(), galleryManifest()],
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+  server: {
+    port: 3000,       // fijo: Figma Make y Playwright dependen de este puerto
+    host: true,       // necesario para Figma Make local codebase
+    strictPort: true,
+  },
+});

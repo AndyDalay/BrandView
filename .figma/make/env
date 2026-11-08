@@ -1,0 +1,5 @@
+PORT=3000
+FIGMA_MAKE_URL=http://localhost:3000
+BOOTSTRAP_TIMEOUT=90000
+VITE_SUPABASE_URL=placeholder_replace_with_your_supabase_url
+VITE_SUPABASE_ANON_KEY=placeholder_replace_with_your_anon_key

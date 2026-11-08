@@ -10,61 +10,10 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { layoutHorizontal, type Lane, type Pin, type PlacedPin } from '../lib/masonryLayout';
 
-export interface Pin {
-  id: string;
-  w: number; // ancho real
-  h: number; // alto real
-}
-
-export interface PlacedPin extends Pin {
-  y: number; // posición vertical dentro de la columna
-  dw: number; // ancho mostrado
-  dh: number; // alto mostrado
-}
-
-export interface Lane {
-  x: number; // posición horizontal de la columna
-  width: number; // ancho de la columna (el pin más ancho)
-  pins: PlacedPin[];
-}
-
-const GAP = 20;
-const TARGET_W = 220; // ancho deseado de cada pin; si es demasiado alto, se reduce al alto de la columna
-
-// Columnas verticales que crecen hacia la derecha.
-// Cada pin se coloca en la columna actual mientras haya espacio; si no cabe, abre otra columna a la derecha.
-export function layoutHorizontal(pins: Pin[], laneH: number): { lanes: Lane[]; width: number } {
-  const lanes: Lane[] = [];
-  let cur: Lane | undefined;
-  let used = 0;
-
-  for (const p of pins) {
-    const ratio = p.w / p.h;
-    let dw = TARGET_W;
-    let dh = TARGET_W / ratio;
-    if (dh > laneH) {
-      dh = laneH;
-      dw = laneH * ratio;
-    }
-
-    const needed = cur && cur.pins.length ? used + GAP + dh : dh;
-    if (!cur || needed > laneH) {
-      const x = cur ? cur.x + cur.width + GAP : 0;
-      cur = { x, width: 0, pins: [] };
-      lanes.push(cur);
-      used = 0;
-    }
-
-    const y = cur.pins.length ? used + GAP : 0;
-    cur.pins.push({ ...p, y, dw, dh });
-    cur.width = Math.max(cur.width, dw);
-    used = y + dh;
-  }
-
-  const last = lanes[lanes.length - 1];
-  return { lanes, width: last ? last.x + last.width : 0 };
-}
+// Los tipos siguen disponibles desde este módulo para no cambiar los consumidores.
+export type { Lane, Pin, PlacedPin } from '../lib/masonryLayout';
 
 const BUFFER = 400; // px extra fuera de pantalla para evitar parpadeos al desplazar
 const PAD = 16; // margen vertical para que el hover (elevación) no se corte
@@ -125,11 +74,13 @@ export function HorizontalMasonry({
   exiting = false,
   intro = false,
   stagger = 1200,
+  inset = 0,
   onMove,
   onDrop,
 }: {
   pins: Pin[];
   height: number;
+  inset?: number; // padding lateral (px) para alinear el primer y último manual con los textos; el scroll sigue a borde a borde
   renderPin: (p: PlacedPin) => ReactNode;
   exiting?: boolean; // salida: columnas de derecha a izquierda
   intro?: boolean; // entrada: columnas de izquierda a derecha
@@ -239,7 +190,7 @@ export function HorizontalMasonry({
 
     if (ghost.current) ghost.current.style.transform = `translate3d(${d.cx - d.grabX}px, ${d.cy - d.grabY}px, 0)`;
 
-    const x = d.cx - rect.left + el.scrollLeft;
+    const x = d.cx - rect.left + el.scrollLeft - inset;
     const y = d.cy - rect.top - PAD;
     const target = findTarget(layoutRef.current, x, y, d.id);
     if (target) {
@@ -425,7 +376,7 @@ export function HorizontalMasonry({
         }
       }}
       className="overflow-x-auto overflow-y-hidden"
-      style={{ height: height + PAD * 2, paddingTop: PAD, paddingBottom: PAD }}
+      style={{ height: height + PAD * 2, paddingTop: PAD, paddingBottom: PAD, paddingLeft: inset, paddingRight: inset }}
     >
       <div className="relative" style={{ width: layout.width, height }}>
         {visible.map((lane) => (
