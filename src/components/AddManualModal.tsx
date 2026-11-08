@@ -74,7 +74,7 @@ export function AddManualModal({ onClose, onAdded }: { onClose: () => void; onAd
             aria-label="Cerrar"
             className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gris-txt-oscuro hover:bg-azul-tint disabled:opacity-40"
           >
-            <Icon icon="solar:close-circle-linear" width={22} />
+            <Icon icon="solar:close-linear" width={20} />
           </button>
         </div>
 

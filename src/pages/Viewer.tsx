@@ -77,11 +77,6 @@ export function Viewer() {
 
   const manual = data?.manuales.find((m) => m.id === id);
 
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen?.();
-  };
-
   const btn = 'grid h-10 w-10 place-items-center rounded-lg text-gris-txt-oscuro hover:bg-azul-tint';
   const ready = phase === 'ready';
   const enterCls = exiting ? 'anim-out' : 'anim-in';
@@ -110,9 +105,6 @@ export function Viewer() {
             )}
             <button onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Activar sonido' : 'Silenciar'} data-testid="sound-toggle" className={btn}>
               <Icon icon={muted ? 'solar:volume-cross-linear' : 'solar:volume-loud-linear'} width={22} />
-            </button>
-            <button onClick={toggleFullscreen} aria-label="Pantalla completa" data-testid="fullscreen-button" className={btn}>
-              <Icon icon="solar:maximize-linear" width={22} />
             </button>
             <button
               onClick={() => go('/', 350)}

@@ -95,7 +95,7 @@ export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () =>
             <p className="mt-1 text-sm text-gris-txt-oscuro">«{manual.nombre}» estará disponible para quien tenga el enlace.</p>
           </div>
           <button onClick={onClose} aria-label="Cerrar" data-testid="share-close" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gris-txt-oscuro hover:bg-azul-tint">
-            <Icon icon="solar:close-circle-linear" width={22} />
+            <Icon icon="solar:close-linear" width={20} />
           </button>
         </div>
 

@@ -367,3 +367,7 @@ Tarea de esta sesión: [descripción]
 ## T8 — Revisión 360×800 (2026-11-08)
 - Archivo: `tests/e2e/movil.spec.ts`. Comprueba que la biblioteca y el visor no tienen scroll horizontal a 360 px y que el botón de comentarios y el de compartir se ven.
 - Pendiente: ejecutar en Windows con `npx playwright test tests/e2e/movil.spec.ts --project=chromium`. Si la cabecera del visor se desborda a 360 px, habrá que reducir los botones o pasarlos a un menú.
+
+## Lote de tareas nuevo
+- Especificaciones y casillas en `TAREAS.md`. Al resolver un punto se borra su especificación y se marca.
+- Hecho en esta sesión: M1, M2, M3.

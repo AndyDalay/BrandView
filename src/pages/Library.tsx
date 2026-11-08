@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Header } from '../components/Header';
 import { ActionsStagger } from '../components/ActionsStagger';
@@ -9,6 +9,8 @@ import { deleteSharedManual } from '../lib/share';
 import { getOrden, hideManual, loadGallery, ordenar, saveOrden, type Gallery, type Manual } from '../lib/gallery';
 import { useTransition } from '../lib/useTransition';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
+import { ShareModal } from '../components/ShareModal';
+import { useMediaQuery } from '../lib/useMediaQuery';
 
 const PIN_EXIT_MS = 1400; // tiempo que tardan los manuales en caer + limpiar textos
 
@@ -32,6 +34,8 @@ export function Library() {
   const [orden, setOrden] = useState<string[]>(getOrden);
   const [pendingDelete, setPendingDelete] = useState<Manual | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [compartiendo, setCompartiendo] = useState<Manual | null>(null);
+  const esMovil = useMediaQuery('(max-width: 639px)'); // móvil: botón Añadir flotante y menú de opciones en cada manual
 
   const reload = useCallback(() => {
     loadGallery()
@@ -106,17 +110,32 @@ export function Library() {
     <>
       <Header>
         <ActionsStagger exiting={exiting}>
-          <button
-            onClick={() => setAdding(true)}
-            data-testid="add-manual-button"
-            className="flex items-center gap-2 rounded-lg bg-azul px-4 py-2 text-sm text-white shadow hover:bg-azul-mid"
-          >
-            <Icon icon="solar:add-circle-linear" width={20} />
-            <span className="sm:hidden">Añadir</span>
-            <span className="hidden sm:inline">Añadir manual</span>
-          </button>
+          {!esMovil && (
+            <button
+              onClick={() => setAdding(true)}
+              data-testid="add-manual-button"
+              className="flex items-center gap-2 rounded-lg bg-azul px-4 py-2 text-sm text-white shadow hover:bg-azul-mid"
+            >
+              <Icon icon="solar:add-circle-linear" width={20} />
+              Añadir manual
+            </button>
+          )}
         </ActionsStagger>
       </Header>
+
+      {/* Móvil: botón flotante abajo a la derecha, al alcance del pulgar. Fuera del header porque el header tiene backdrop-filter */}
+      {esMovil && (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          data-testid="add-manual-button"
+          aria-label="Añadir manual"
+          className="fixed bottom-6 right-5 z-40 flex items-center gap-2 rounded-full bg-azul px-5 py-3 text-sm text-white shadow-xl hover:bg-azul-mid"
+        >
+          <Icon icon="solar:add-circle-linear" width={22} />
+          Añadir
+        </button>
+      )}
 
 
       <main data-testid="library-page" className="relative z-10 w-full px-5 py-10 md:px-10">
@@ -151,12 +170,15 @@ export function Library() {
                   pin={p}
                   onOpen={open}
                   onDelete={handleDelete}
+                  onShare={setCompartiendo}
                 />
               )}
             />
           </div>
         )}
       </main>
+
+      {compartiendo && <ShareModal manual={compartiendo} onClose={() => setCompartiendo(null)} />}
 
       {pendingDelete && (
         <ConfirmDeleteModal
@@ -186,12 +208,28 @@ function PinCard({
   pin,
   onOpen,
   onDelete,
+  onShare,
 }: {
   manual: Manual;
   pin: PlacedPin;
   onOpen: (m: Manual) => void;
   onDelete: (m: Manual) => void;
+  onShare: (m: Manual) => void;
 }) {
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const borrable = manual.local || manual.remoto;
+
+  // El menú móvil se cierra al tocar fuera
+  useEffect(() => {
+    if (!menuAbierto) return;
+    const fuera = (e: PointerEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuAbierto(false);
+    };
+    document.addEventListener('pointerdown', fuera);
+    return () => document.removeEventListener('pointerdown', fuera);
+  }, [menuAbierto]);
+
   return (
     <div className="group relative h-full w-full transition-transform duration-300 ease-out hover:-translate-y-2">
       <a
@@ -233,19 +271,73 @@ function PinCard({
         </div>
       </a>
 
-      {/* Borrar: esquina superior derecha, pegada al borde; en táctil siempre visible */}
+      {/* Móvil: opciones (⋯). Se abre con un toque y muestra Compartir y Eliminar */}
+      <div ref={menuRef} className="absolute right-0 top-0 z-20 sm:hidden">
+        <button
+          type="button"
+          data-testid="manual-options"
+          aria-label={`Opciones de ${manual.nombre}`}
+          aria-haspopup="menu"
+          aria-expanded={menuAbierto}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setMenuAbierto((o) => !o);
+          }}
+          className="grid h-9 w-9 place-items-center rounded-bl-xl rounded-tr-md bg-white text-azul-dark shadow-md"
+        >
+          <Icon icon="solar:menu-dots-linear" width={18} />
+        </button>
+        {menuAbierto && (
+          <div role="menu" data-testid="manual-options-menu" className="absolute right-0 top-10 w-40 rounded-xl border border-gris-line bg-white p-1 shadow-xl">
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="manual-options-share"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuAbierto(false);
+                onShare(manual);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-azul-dark hover:bg-azul-tint"
+            >
+              <Icon icon="solar:share-linear" width={18} />
+              Compartir
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="manual-options-delete"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuAbierto(false);
+                onDelete(manual);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-terracota hover:bg-azul-tint"
+            >
+              <Icon icon="solar:trash-bin-minimalistic-linear" width={18} />
+              {borrable ? 'Eliminar' : 'Ocultar'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Escritorio: borrar en la esquina superior derecha, visible al pasar el ratón */}
       <button
         type="button"
         data-testid="manual-delete"
-        title={manual.local || manual.remoto ? 'Borrar manual' : 'Ocultar manual'}
-        aria-label={`${manual.local || manual.remoto ? 'Borrar' : 'Ocultar'} ${manual.nombre}`}
+        title={borrable ? 'Borrar manual' : 'Ocultar manual'}
+        aria-label={`${borrable ? 'Borrar' : 'Ocultar'} ${manual.nombre}`}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           onDelete(manual);
         }}
-        className="absolute right-0 top-0 z-20 grid h-9 w-9 place-items-center rounded-bl-xl rounded-tr-md bg-white text-terracota opacity-0 shadow-md transition-all duration-200 ease-out hover:bg-terracota hover:text-white focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+        className="absolute right-0 top-0 z-20 hidden h-9 w-9 place-items-center rounded-bl-xl rounded-tr-md bg-white text-terracota opacity-0 shadow-md transition-all duration-200 ease-out hover:bg-terracota hover:text-white focus-visible:opacity-100 group-hover:opacity-100 sm:grid"
       >
         <Icon icon="solar:trash-bin-minimalistic-linear" width={18} />
       </button>
