@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Icon } from '@iconify/react';
 import {
   borrarComentario,
@@ -62,10 +62,11 @@ export function CommentLayer({
   const [fotoFallida, setFotoFallida] = useState<Record<string, true>>({}); // si la foto no carga, se muestra la inicial
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hablando, setHablando] = useState(false); // T7: lectura en voz alta (Web Speech API)
+  const [hablando, setHablando] = useState(false); // reproduciendo nota de voz o leyendo texto
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Al desmontar la capa se calla la voz
-  useEffect(() => () => window.speechSynthesis?.cancel(), []);
+  // Al desmontar la capa se calla todo
+  useEffect(() => () => { audioRef.current?.pause(); window.speechSynthesis?.cancel(); }, []);
 
   const cargar = useCallback(() => {
     listarComentarios(manualId)
@@ -219,13 +220,30 @@ export function CommentLayer({
     }
   }
 
-  function leerEnVoz(texto: string) {
+  // Botón de voz: si el comentario tiene audio, reproduce la nota original; si no, lee el texto (Web Speech API)
+  function reproducir(c: Comentario) {
+    if (c.audioUrl) {
+      audioRef.current?.pause();
+      const a = new Audio(c.audioUrl);
+      a.onended = () => setHablando(false);
+      a.onerror = () => {
+        setHablando(false);
+        setError('No se pudo reproducir la nota de voz.');
+      };
+      audioRef.current = a;
+      setHablando(true);
+      void a.play().catch(() => {
+        setHablando(false);
+        setError('No se pudo reproducir la nota de voz.');
+      });
+      return;
+    }
     if (!('speechSynthesis' in window)) {
       setError('Tu navegador no puede leer en voz alta.');
       return;
     }
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(texto);
+    const u = new SpeechSynthesisUtterance(c.texto);
     u.lang = 'es-ES';
     u.onend = () => setHablando(false);
     u.onerror = () => setHablando(false);
@@ -234,6 +252,7 @@ export function CommentLayer({
   }
 
   function callarVoz() {
+    audioRef.current?.pause();
     window.speechSynthesis?.cancel();
     setHablando(false);
   }
@@ -365,26 +384,16 @@ export function CommentLayer({
             </div>
           )}
 
-          {seleccionado.estado === 'listo' && seleccionado.texto && (
+          {seleccionado.estado === 'listo' && (seleccionado.audioUrl || seleccionado.texto) && (
             <button
               type="button"
               data-testid="comment-speak"
-              onClick={() => (hablando ? callarVoz() : leerEnVoz(seleccionado.texto))}
+              onClick={() => (hablando ? callarVoz() : reproducir(seleccionado))}
               className="mt-3 flex items-center gap-2 rounded-lg border border-gris-line px-3 py-1.5 text-xs text-azul-dark hover:bg-azul-tint"
             >
               <Icon icon={hablando ? 'solar:volume-cross-linear' : 'solar:volume-loud-linear'} width={16} />
               {hablando ? 'Detener' : 'Leer en voz alta'}
             </button>
-          )}
-
-          {seleccionado.audioUrl && (
-            <audio
-              data-testid="comment-audio"
-              controls
-              preload="none"
-              src={seleccionado.audioUrl}
-              className="mt-3 h-9 w-full"
-            />
           )}
 
           {uid === seleccionado.autorId && (

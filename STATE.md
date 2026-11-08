@@ -354,3 +354,6 @@ Tarea de esta sesión: [descripción]
 - Foco por teclado visible en lágrimas y papelera. El estado de transcripción se anuncia con `role="status"`.
 - Pendiente: revisión a 360×800 en navegador.
 - Limpieza del manual huérfano "ALTA" (owner de otra sesión): en el SQL Editor, `delete from storage.objects where bucket_id='manuales' and (storage.foldername(name))[1]='manual-alta';` y luego `delete from manuales where id='manual-alta';`.
+
+## Botón de voz en el panel (2026-11-08)
+- Se quitó el reproductor nativo del panel. "Leer en voz alta" reproduce la nota de voz original si el comentario tiene audio; si es solo texto, lee el texto con Web Speech.
