@@ -344,3 +344,7 @@ Tarea de esta sesión: [descripción]
 
 ## Comentarios en manuales locales (2026-11-08)
 - El botón de comentarios y la capa ya no dependen de `remoto`: cualquier manual abierto puede tener comentarios. Los manuales locales usan su `id` de galería como `manual_id` (la tabla no tiene clave foránea).
+
+## Borrado de manual compartido y T7 (2026-11-08)
+- Borrado: el error ahora indica cuántos archivos se borraron de cuántos y el motivo de Storage. Diagnóstico en Supabase SQL: `select id, owner_id, nombre from manuales;` y `select policyname, cmd from pg_policies where schemaname='storage' and tablename='objects';`. Si `owner_id` no coincide con el id del usuario actual (Authentication → Users), la fila pertenece a otra sesión.
+- T7: botón "Leer en voz alta" en el panel del comentario (Web Speech API, es-ES), se calla al cerrar el panel o al desmontar la capa.

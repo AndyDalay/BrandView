@@ -62,6 +62,10 @@ export function CommentLayer({
   const [fotoFallida, setFotoFallida] = useState<Record<string, true>>({}); // si la foto no carga, se muestra la inicial
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hablando, setHablando] = useState(false); // T7: lectura en voz alta (Web Speech API)
+
+  // Al desmontar la capa se calla la voz
+  useEffect(() => () => window.speechSynthesis?.cancel(), []);
 
   const cargar = useCallback(() => {
     listarComentarios(manualId)
@@ -215,6 +219,25 @@ export function CommentLayer({
     }
   }
 
+  function leerEnVoz(texto: string) {
+    if (!('speechSynthesis' in window)) {
+      setError('Tu navegador no puede leer en voz alta.');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'es-ES';
+    u.onend = () => setHablando(false);
+    u.onerror = () => setHablando(false);
+    setHablando(true);
+    window.speechSynthesis.speak(u);
+  }
+
+  function callarVoz() {
+    window.speechSynthesis?.cancel();
+    setHablando(false);
+  }
+
   const visibles = comentarios.filter((c) => c.pagina === pagina);
   const seleccionado = comentarios.find((c) => c.id === abierto) ?? null;
   const fotoDe = (c: Comentario) => (c.autorAvatar && !fotoFallida[c.id] ? c.autorAvatar : null);
@@ -285,7 +308,7 @@ export function CommentLayer({
               <p className="truncate text-sm font-semibold text-azul-dark">{seleccionado.autorNombre}</p>
               <p className="text-[11px] leading-tight text-gris-txt">{fecha(seleccionado.createdAt)}</p>
             </div>
-            <button type="button" aria-label="Cerrar" onClick={() => setAbierto(null)} className="grid h-7 w-7 shrink-0 place-items-center text-gris-txt-oscuro hover:text-azul-dark">
+            <button type="button" aria-label="Cerrar" onClick={() => { callarVoz(); setAbierto(null); }} className="grid h-7 w-7 shrink-0 place-items-center text-gris-txt-oscuro hover:text-azul-dark">
               <Icon icon="solar:close-linear" width={18} />
             </button>
           </div>
@@ -340,6 +363,18 @@ export function CommentLayer({
                 </button>
               )}
             </div>
+          )}
+
+          {seleccionado.estado === 'listo' && seleccionado.texto && (
+            <button
+              type="button"
+              data-testid="comment-speak"
+              onClick={() => (hablando ? callarVoz() : leerEnVoz(seleccionado.texto))}
+              className="mt-3 flex items-center gap-2 rounded-lg border border-gris-line px-3 py-1.5 text-xs text-azul-dark hover:bg-azul-tint"
+            >
+              <Icon icon={hablando ? 'solar:volume-cross-linear' : 'solar:volume-loud-linear'} width={16} />
+              {hablando ? 'Detener' : 'Leer en voz alta'}
+            </button>
           )}
 
           {seleccionado.audioUrl && (

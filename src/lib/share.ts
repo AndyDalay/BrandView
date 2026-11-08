@@ -54,7 +54,10 @@ export async function deleteSharedManual(id: string): Promise<void> {
     // por eso se cuentan los archivos realmente eliminados.
     const { data: removed, error: storageError } = await supabase.storage.from(BUCKET).remove(unique);
     if (storageError || (removed?.length ?? 0) < unique.length) {
-      throw new Error('No se pudieron borrar los archivos. El manual no se ha borrado.');
+      const motivo = storageError ? ` Motivo: ${storageError.message}.` : '';
+      throw new Error(
+        `No se pudieron borrar los archivos (${removed?.length ?? 0} de ${unique.length}).${motivo} El manual no se ha borrado.`,
+      );
     }
   }
 
