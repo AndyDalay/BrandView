@@ -333,3 +333,11 @@ Tarea de esta sesión: [descripción]
 - Notas sin petición activa y con más de 90 s se marcan como atascadas y ofrecen Reintentar.
 - Servidor: tiempo máximo por proveedor 20 s (Groq y HF); cliente aborta a los 50 s; `console.error('[transcribir]')` en los logs de Vercel con código de error.
 - Códigos de error: `config`, `sesion`, `peticion`, `bd`, `no_encontrado`, `sin_audio`, `audio`, `groq`, `hf`, `proveedores`, `interno`, `red`, `timeout`.
+
+## Diagnóstico de login con Google (2026-11-08)
+- El proyecto se restauró desde el zip subido (`4a05196a-grandbrandvielast-update.zip`) como fuente de verdad. Copia previa de seguridad en la carpeta de scratchpad `backup-previo/gbv`.
+- Síntoma: al pulsar el botón, la página vuelve a la inicial y el perfil nunca aparece.
+- Aviso temporal (`data-testid="auth-toast"`): muestra el `redirectTo` usado, el error de Supabase con estado y código, y lo que llega en la URL al volver de Google. Se retira cuando se encuentre la causa.
+- Botón renombrado a "Iniciar Sesión".
+- Comprobaciones pendientes en Supabase: Google activado con Client ID/Secret; "Allow manual linking" activo; Redirect URLs con `https://<dominio-vercel>/**` (la ruta `/cuenta` cae en la ruta `*`).
+- Comentarios: el botón solo aparece dentro de un manual compartido (`remoto`), no en los manuales locales.

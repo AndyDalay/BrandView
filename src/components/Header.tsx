@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import type { User } from '@supabase/supabase-js';
 import { supabaseReady } from '@/lib/supabaseClient';
-import { getCurrentUser, isGoogleAccount, onAuthChange, signInWithGoogle, signOut } from '@/lib/auth';
+import { diagnosticoRetorno, ErrorAuth, getCurrentUser, isGoogleAccount, onAuthChange, signInWithGoogle, signOut, urlRetorno } from '@/lib/auth';
 import { getPerfil, urlAvatar, type Perfil } from '@/lib/perfiles';
 import { UserAvatar } from './UserAvatar';
 import { EditProfileModal } from './EditProfileModal';
@@ -19,6 +19,8 @@ export function Header({ children }: { children?: ReactNode }) {
   const [authReady, setAuthReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Aviso temporal de diagnóstico (login con Google): mensaje + detalle técnico copiable
+  const [aviso, setAviso] = useState<{ tipo: 'info' | 'error'; texto: string; detalle?: string } | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -27,6 +29,13 @@ export function Header({ children }: { children?: ReactNode }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemsRef = useRef<HTMLButtonElement[]>([]);
+
+  // Diagnóstico al cargar: si Google devolvió un error o tokens en la URL, se muestra en el aviso
+  useEffect(() => {
+    const r = diagnosticoRetorno();
+    if (r.error) setAviso({ tipo: 'error', texto: 'Google devolvió un error al volver a la app.', detalle: r.error });
+    else if (r.tokens) setAviso({ tipo: 'info', texto: 'Volviste de Google con datos de sesión. Comprobando…', detalle: 'access_token recibido' });
+  }, []);
 
   useEffect(() => {
     if (!supabaseReady) return;
@@ -104,10 +113,14 @@ export function Header({ children }: { children?: ReactNode }) {
   async function handleLogin() {
     setBusy(true);
     setError(null);
+    setAviso({ tipo: 'info', texto: 'Abriendo Google…', detalle: `redirectTo: ${urlRetorno()}` });
     try {
       await signInWithGoogle();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo iniciar sesión con Google.');
+      const mensaje = e instanceof Error ? e.message : 'No se pudo iniciar sesión con Google.';
+      const detalle = e instanceof ErrorAuth ? e.detalle : String(e);
+      setError(mensaje);
+      setAviso({ tipo: 'error', texto: mensaje, detalle });
       setBusy(false);
     }
   }
@@ -233,10 +246,32 @@ export function Header({ children }: { children?: ReactNode }) {
                 onClick={handleLogin}
                 className="rounded-full border border-gris-line px-4 py-2 text-sm font-medium text-azul disabled:opacity-60"
               >
-                Iniciar sesión con Google
+                Iniciar Sesión
               </button>
             ))}
         </div>
+
+        {aviso && (
+          <div
+            role="status"
+            data-testid="auth-toast"
+            className={`fixed bottom-4 left-1/2 z-50 w-[min(92vw,460px)] -translate-x-1/2 rounded-xl border bg-white p-3 text-sm shadow-xl ${
+              aviso.tipo === 'error' ? 'border-red-300 text-red-800' : 'border-gris-line text-azul-dark'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium">{aviso.texto}</p>
+              <button type="button" aria-label="Cerrar aviso" onClick={() => setAviso(null)} className="shrink-0 text-gris-txt-oscuro hover:text-azul-dark">
+                <Icon icon="solar:close-linear" width={16} />
+              </button>
+            </div>
+            {aviso.detalle && (
+              <p data-testid="auth-toast-detail" className="mt-2 select-all break-all rounded-md bg-gris-bg/60 p-2 font-mono text-[11px] text-gris-txt-oscuro">
+                {aviso.detalle}
+              </p>
+            )}
+          </div>
+        )}
 
         {error && (
           <p role="alert" data-testid="auth-error" className="absolute right-5 top-full mt-1 max-w-[260px] text-right text-xs text-red-700 md:right-10">

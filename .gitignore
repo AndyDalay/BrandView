@@ -4,6 +4,7 @@ dist
 .vercel
 .env.local
 .env.*.local
+grandbrandvie(last-update).zip
 
 .vercel
 .env*

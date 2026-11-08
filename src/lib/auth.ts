@@ -6,6 +6,37 @@ import { supabase } from '@/lib/supabaseClient';
 // /cuenta todavía no existe (P8): hasta entonces el redirect puede caer en la ruta "*".
 const CUENTA_PATH = '/cuenta';
 
+// Diagnóstico temporal: foto de la URL al cargar la página (antes de que Supabase procese el retorno de Google)
+export const ARRANQUE = {
+  ruta: typeof window !== 'undefined' ? window.location.pathname : '',
+  hash: typeof window !== 'undefined' ? window.location.hash : '',
+  search: typeof window !== 'undefined' ? window.location.search : '',
+};
+
+/** Error de login con detalle técnico para mostrar en el aviso. */
+export class ErrorAuth extends Error {
+  detalle: string;
+  constructor(mensaje: string, detalle: string) {
+    super(mensaje);
+    this.detalle = detalle;
+  }
+}
+
+export function urlRetorno(): string {
+  return `${window.location.origin}${CUENTA_PATH}`;
+}
+
+function detalleSupabase(error: { name?: string; status?: number; code?: string; message: string }): string {
+  return `${error.name ?? 'Error'} · estado ${error.status ?? '-'} · código ${error.code ?? '-'} · ${error.message}`;
+}
+
+/** Lee la URL con la que volvió Google (errores de Supabase o tokens). */
+export function diagnosticoRetorno(): { error: string | null; tokens: boolean } {
+  const params = new URLSearchParams(ARRANQUE.hash.replace(/^#/, '') + '&' + ARRANQUE.search.replace(/^\?/, ''));
+  const error = params.get('error_description') ?? params.get('error');
+  return { error: error ? `${params.get('error') ?? 'error'}: ${error}` : null, tokens: params.has('access_token') };
+}
+
 /** Usuario de la sesión actual (anónimo o con Google), o null. */
 export async function getCurrentUser(): Promise<User | null> {
   if (!supabase) return null;
@@ -26,17 +57,17 @@ export function isGoogleAccount(user: User | null): boolean {
  */
 export async function signInWithGoogle(): Promise<void> {
   if (!supabase) throw new Error('Supabase no está configurado.');
-  const redirectTo = `${window.location.origin}${CUENTA_PATH}`;
+  const redirectTo = urlRetorno();
   const { data } = await supabase.auth.getSession();
 
   if (data.session?.user.is_anonymous) {
     const { error } = await supabase.auth.linkIdentity({ provider: 'google', options: { redirectTo } });
-    if (error) throw new Error(traducirErrorAuth(error));
+    if (error) throw new ErrorAuth(traducirErrorAuth(error), detalleSupabase(error));
     return;
   }
 
   const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
-  if (error) throw new Error(traducirErrorAuth(error));
+  if (error) throw new ErrorAuth(traducirErrorAuth(error), detalleSupabase(error));
 }
 
 /** Cierra la sesión actual. */
