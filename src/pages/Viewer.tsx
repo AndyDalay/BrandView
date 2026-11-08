@@ -91,7 +91,7 @@ export function Viewer() {
       <Header>
         {ready && (
           <ActionsStagger exiting={exiting}>
-            {manual?.remoto && (
+            {manual && (
               <button
                 onClick={() => setColocando((c) => !c)}
                 aria-label="Comentarios"
@@ -153,7 +153,7 @@ export function Viewer() {
                 </h1>
                 <div className={`relative ${enterCls}`} style={exiting ? undefined : { animationDelay: '320ms' }}>
                   <BookViewer pages={manual.paginas} ratio={manual.paginaW / manual.paginaH} muted={muted} />
-                  {manual.remoto && (
+                  {manual && (
                     <CommentLayer manualId={manual.id} modo={colocando} onSalirModo={() => setColocando(false)} />
                   )}
                 </div>

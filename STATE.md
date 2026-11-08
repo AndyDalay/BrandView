@@ -341,3 +341,6 @@ Tarea de esta sesión: [descripción]
 - Botón renombrado a "Iniciar Sesión".
 - Comprobaciones pendientes en Supabase: Google activado con Client ID/Secret; "Allow manual linking" activo; Redirect URLs con `https://<dominio-vercel>/**` (la ruta `/cuenta` cae en la ruta `*`).
 - Comentarios: el botón solo aparece dentro de un manual compartido (`remoto`), no en los manuales locales.
+
+## Comentarios en manuales locales (2026-11-08)
+- El botón de comentarios y la capa ya no dependen de `remoto`: cualquier manual abierto puede tener comentarios. Los manuales locales usan su `id` de galería como `manual_id` (la tabla no tiene clave foránea).

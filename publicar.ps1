@@ -68,3 +68,5 @@ catch {
     Write-Host 'Revisa el mensaje de git de arriba, resuelve el problema y vuelve a ejecutar el script.' -ForegroundColor Yellow
     exit 1
 }
+
+###COMANDO:  powershell -ExecutionPolicy Bypass -File "C:\Users\andyy\Documents\WORK\WEB DESING\Workflow-DESIGN 2.0\GrandBrandView\grandbrandview\publicar.ps1" -Mensaje "Describe el cambio"
