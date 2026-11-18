@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import type { Manual } from '../lib/gallery';
 import { publishManual, supabaseReady } from '../lib/share';
 import { supabaseEnvStatus } from '../lib/supabase';
+import { CloseButton } from './ui/Button';
 
 function shareText(nombre: string, link?: string) {
   const base = `Te comparto el manual «${nombre}» de GrandBrandView.`;
@@ -94,9 +95,7 @@ export function ShareModal({ manual, onClose }: { manual: Manual; onClose: () =>
             <h2 className="font-display text-2xl text-azul-dark">Compartir manual</h2>
             <p className="mt-1 text-sm text-gris-txt-oscuro">«{manual.nombre}» estará disponible para quien tenga el enlace.</p>
           </div>
-          <button onClick={onClose} aria-label="Cerrar" data-testid="share-close" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gris-txt-oscuro hover:bg-azul-tint">
-            <Icon icon="solar:close-linear" width={20} />
-          </button>
+          <CloseButton onClick={onClose} data-testid="share-close" />
         </div>
 
         {!supabaseReady && (

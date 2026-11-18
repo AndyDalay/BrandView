@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Icon } from '@iconify/react';
 import { Header } from '../components/Header';
 import { AdBanner } from '../components/AdBanner';
 import { BookViewer } from '../components/BookViewer';
@@ -10,6 +9,11 @@ import { loadGallery, markSeen, type Gallery } from '../lib/gallery';
 import { ShareModal } from '../components/ShareModal';
 import { CommentLayer } from '../components/CommentLayer';
 import { useTransition } from '../lib/useTransition';
+import { useAjustes } from '../lib/ajustes';
+import { TopInfoManual } from '../components/TopInfoManual';
+import { anchoPagina, TABLET_QUERY } from '../lib/bookSize';
+import { useMediaQuery } from '../lib/useMediaQuery';
+import { IconButton } from '../components/ui/Button';
 
 const MIN_LOADER_MS = 2000;
 const FADE_MS = 500;
@@ -38,7 +42,10 @@ export function Viewer() {
   const { exiting, go } = useTransition();
   const [data, setData] = useState<Gallery | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [muted, setMuted] = useState(false);
+  const ajustes = useAjustes();
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const lateral = useMediaQuery(TABLET_QUERY);
+  const muted = ajustes.volumen === 0; // el volumen se ajusta en Configuración
   const [sharing, setSharing] = useState(false);
   const [colocando, setColocando] = useState(false); // modo comentar: un clic en el libro añade un comentario
   const [phase, setPhase] = useState<'loading' | 'fading' | 'ready'>('loading');
@@ -77,7 +84,6 @@ export function Viewer() {
 
   const manual = data?.manuales.find((m) => m.id === id);
 
-  const btn = 'grid h-10 w-10 place-items-center rounded-lg text-gris-txt-oscuro hover:bg-azul-tint';
   const ready = phase === 'ready';
   const enterCls = exiting ? 'anim-out' : 'anim-in';
 
@@ -86,34 +92,21 @@ export function Viewer() {
       <Header>
         {ready && (
           <ActionsStagger exiting={exiting}>
+            {/* V6: atrás va a la izquierda de todas las acciones, solo icono */}
+            <IconButton icono="solar:undo-left-round-linear" label="Volver a la biblioteca" onClick={() => go('/', 350)} data-testid="back-button" />
             {manual && (
-              <button
+              <IconButton
+                icono="solar:chat-round-linear"
+                label={colocando ? 'Salir del modo comentario' : 'Comentarios'}
                 onClick={() => setColocando((c) => !c)}
-                aria-label="Comentarios"
                 aria-pressed={colocando}
-                title={colocando ? 'Salir del modo comentario' : 'Comentarios'}
                 data-testid="comment-toggle-button"
-                className={`${btn} ${colocando ? 'bg-azul text-white hover:bg-azul-mid' : ''}`}
-              >
-                <Icon icon="solar:chat-round-linear" width={22} />
-              </button>
+                className={colocando ? 'bg-azul text-white hover:bg-azul-mid' : ''}
+              />
             )}
             {manual && (
-              <button onClick={() => setSharing(true)} aria-label="Compartir" title="Compartir" data-testid="share-button" className={btn}>
-                <Icon icon="solar:share-linear" width={22} />
-              </button>
+              <IconButton icono="solar:share-linear" label="Compartir" onClick={() => setSharing(true)} data-testid="share-button" />
             )}
-            <button onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Activar sonido' : 'Silenciar'} data-testid="sound-toggle" className={btn}>
-              <Icon icon={muted ? 'solar:volume-cross-linear' : 'solar:volume-loud-linear'} width={22} />
-            </button>
-            <button
-              onClick={() => go('/', 350)}
-              data-testid="back-button"
-              className="ml-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gris-txt-oscuro hover:bg-azul-tint"
-            >
-              <Icon icon="solar:arrow-left-linear" width={20} />
-              <span className="hidden sm:inline">Biblioteca</span>
-            </button>
           </ActionsStagger>
         )}
       </Header>
@@ -126,11 +119,14 @@ export function Viewer() {
         </div>
       ) : (
         <>
-          <div className="pt-4">
-            <div className={enterCls} style={exiting ? undefined : { animationDelay: '120ms' }}>
-              <AdBanner ads={data?.ads ?? []} />
+          {/* V11: el banner solo aparece si el usuario lo activa en Configuración */}
+          {ajustes.mostrarAnuncios && (
+            <div className="pt-4">
+              <div className={enterCls} style={exiting ? undefined : { animationDelay: '120ms' }}>
+                <AdBanner ads={data?.ads ?? []} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex flex-1 flex-col items-center justify-center px-2 py-6">
             {error && <p className="text-terracota">{error}</p>}
@@ -143,6 +139,7 @@ export function Viewer() {
                 >
                   {manual.nombre}
                 </h1>
+                <TopInfoManual manual={manual} ancho={anchoPagina(manual.paginaW / manual.paginaH, isDesktop, lateral)} />
                 <div className={`relative ${enterCls}`} style={exiting ? undefined : { animationDelay: '320ms' }}>
                   <BookViewer pages={manual.paginas} ratio={manual.paginaW / manual.paginaH} muted={muted} />
                   {manual && (

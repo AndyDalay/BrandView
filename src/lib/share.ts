@@ -32,6 +32,8 @@ export async function loadRemote(): Promise<Manual[]> {
     paginas: (r.paginas as string[]).map(pub),
     local: false,
     remoto: true,
+    ownerId: r.owner_id as string,
+    compartidoEn: r.created_at as string,
   }));
 }
 

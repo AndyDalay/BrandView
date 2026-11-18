@@ -26,9 +26,9 @@ test.describe('Visor', () => {
 
   test('los controles de la barra superior existen', async ({ page }) => {
     const viewer = new ViewerPage(page)
+    // Sonido y pantalla completa se quitaron de la barra (V1). Ahora van comentarios, compartir y volver.
     await expect(viewer.shareButton).toBeVisible({ timeout: 15_000 })
-    await expect(viewer.soundToggle).toBeVisible()
-    await expect(viewer.fullscreenButton).toBeVisible()
+    await expect(page.getByTestId('comment-toggle-button')).toBeVisible()
     await expect(viewer.backButton).toBeVisible()
   })
 })

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
-import { Icon } from '@iconify/react';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { playFlipSound } from '../lib/sound';
+import { PageArrowButton } from './ui/PageArrowButton';
+import { bookSize, TABLET_QUERY, vwEscritorio } from '../lib/bookSize';
 
 type Spread = [string | null, string | null];
 type Flip = 'next' | 'prev' | null;
@@ -68,19 +69,10 @@ function Leaf({
   );
 }
 
-/**
- * Calcula el tamaño del libro a partir de la proporción de sus páginas (ancho / alto).
- * El libro ocupa el máximo espacio disponible sin deformarse ni salirse de la pantalla.
- * En escritorio se muestran dos páginas (una doble), en móvil una sola.
- */
-function bookSize(ratio: number, pagesAcross: number, maxVh: string, maxVw: string, maxPx: number) {
-  const totalRatio = ratio * pagesAcross;
-  const height = `min(${maxVh}, ${maxPx}px, calc(min(${maxVw}, ${maxPx * 1.5}px) / ${totalRatio.toFixed(4)}))`;
-  return { height, width: `calc(${totalRatio.toFixed(4)} * ${height})` };
-}
-
 export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: number; muted: boolean }) {
   const isDesktop = useMediaQuery('(min-width: 768px)');
+  // Tablet: flechas a los lados del libro (en vez de debajo)
+  const lateral = useMediaQuery(TABLET_QUERY);
   const safeRatio = ratio > 0 ? ratio : 0.7071;
   const spreads = useMemo(() => buildSpreads(pages), [pages]);
   // En móvil cada unidad es una sola página: [null, página]
@@ -124,8 +116,12 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
   const cur = units[idx] ?? [null, null];
   const prevU = units[idx - 1];
   const nextU = units[idx + 1];
-  const canNext = idx < count - 1 && flip === null;
-  const canPrev = idx > 0 && flip === null;
+  // hayNext / hayPrev: existe página en esa dirección (solo cambia el aspecto del botón).
+  // canNext / canPrev: se puede iniciar un giro ahora (exige además que no haya otro girando).
+  const hayNext = idx < count - 1;
+  const hayPrev = idx > 0;
+  const canNext = hayNext && flip === null;
+  const canPrev = hayPrev && flip === null;
 
   // Apertura y cierre del libro: giro más lento
   const ms = flip !== null ? flipMs : FLIP_MS;
@@ -180,6 +176,8 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
 
   const startHold = (dir: 'next' | 'prev') => (e: ReactPointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // V5: en portada o contraportada no hay nada que mantener pulsado
+    if (dir === 'prev' ? !hayPrev : !hayNext) return;
     heldRef.current = false;
     holdTimer.current = window.setTimeout(() => {
       holdTimer.current = null;
@@ -249,7 +247,7 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
     }
   };
 
-  const desktop = bookSize(safeRatio, 2, '74vh', '94vw', 720);
+  const desktop = bookSize(safeRatio, 2, '74vh', vwEscritorio(lateral), 720);
   const mobile = bookSize(safeRatio, 1, '72vh', '94vw', 820);
 
   const anim = (name: 'flipNext' | 'flipPrev', origin: string): CSSProperties => ({
@@ -261,7 +259,6 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
   const leftSrc = flip === 'prev' ? prevU?.[0] ?? null : cur[0];
   const rightSrc = flip === 'next' ? nextU?.[1] ?? null : cur[1];
   const leftOn = leftSrc !== null || flip !== null;
-  const rightOn = rightSrc !== null || flip !== null;
   // Franja central y sombras solo cuando hay una página real en cada lado (no durante aperturas/cierres vacíos)
   const rightPaper = rightSrc !== null;
 
@@ -314,8 +311,31 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
     opacity: isEdgeFlip ? undefined : has(leftSrc),
   } as CSSProperties;
 
+  // Flechas de página, una sola definición para los dos sitios donde pueden estar (lateral o debajo)
+  const flechaAnterior = (
+    <PageArrowButton
+      direccion="prev"
+      inactivo={!hayPrev}
+      onPulsar={clickPrev}
+      onPulsacionInicio={startHold('prev')}
+      onPulsacionFin={stopHold}
+    />
+  );
+  const flechaSiguiente = (
+    <PageArrowButton
+      direccion="next"
+      inactivo={!hayNext}
+      onPulsar={clickNext}
+      onPulsacionInicio={startHold('next')}
+      onPulsacionFin={stopHold}
+    />
+  );
+
   return (
     <div data-testid="book-viewer" className="flex w-full flex-col items-center">
+      {/* En tablet, fila con ◀ libro ▶ (flechas laterales). En el resto, display: contents: no cambia el layout. */}
+      <div className={lateral ? 'flex w-full items-center justify-center gap-3' : 'contents'}>
+      {lateral && flechaAnterior}
       {isDesktop ? (
         <div
           className="relative mx-auto"
@@ -410,21 +430,11 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
           )}
         </div>
       )}
+      {lateral && flechaSiguiente}
+      </div>
 
       <div className="mt-8 flex items-center gap-5">
-        <button
-          onPointerDown={startHold('prev')}
-          onPointerUp={stopHold}
-          onPointerLeave={stopHold}
-          onPointerCancel={stopHold}
-          onClick={clickPrev}
-          onContextMenu={(e) => e.preventDefault()}
-          disabled={!canPrev}
-          aria-label="Página anterior" data-testid="prev-page"
-          className="grid h-11 w-11 place-items-center rounded-full bg-white text-azul-dark shadow hover:bg-azul-tint disabled:opacity-40"
-        >
-          <Icon icon="solar:alt-arrow-left-linear" width={22} />
-        </button>
+        {!lateral && flechaAnterior}
         {editing ? (
           <input
             data-testid="page-input"
@@ -454,19 +464,7 @@ export function BookViewer({ pages, ratio, muted }: { pages: string[]; ratio: nu
             {idx + 1} / {count}
           </button>
         )}
-        <button
-          onPointerDown={startHold('next')}
-          onPointerUp={stopHold}
-          onPointerLeave={stopHold}
-          onPointerCancel={stopHold}
-          onClick={clickNext}
-          onContextMenu={(e) => e.preventDefault()}
-          disabled={!canNext}
-          aria-label="Página siguiente" data-testid="next-page"
-          className="grid h-11 w-11 place-items-center rounded-full bg-white text-azul-dark shadow hover:bg-azul-tint disabled:opacity-40"
-        >
-          <Icon icon="solar:alt-arrow-right-linear" width={22} />
-        </button>
+        {!lateral && flechaSiguiente}
       </div>
       {!isDesktop && <p className="mt-3 text-sm text-gris-txt">Desliza para pasar la página</p>}
     </div>

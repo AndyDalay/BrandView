@@ -13,6 +13,9 @@ export interface Manual {
   nuevo?: boolean; // subido recientemente y aún no abierto
   local?: boolean; // subido desde esta app (IndexedDB), se puede borrar de verdad
   remoto?: boolean; // compartido en Supabase; se borra de la BD y del Storage (solo el dueño)
+  ownerId?: string; // dueño del manual compartido
+  compartidoEn?: string; // fecha de creación del manual compartido (ISO)
+  subidoEn?: string; // fecha de subida de un manual local (ISO)
 }
 
 export interface Gallery {
@@ -89,6 +92,7 @@ function localToManual(m: StoredManual): Manual {
     paginas: urls,
     nuevo: !isSeen(m.id),
     local: true,
+    subidoEn: new Date(m.createdAt).toISOString(),
   };
 }
 

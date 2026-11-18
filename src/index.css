@@ -155,3 +155,44 @@ body.gbv-dragging, body.gbv-dragging * { cursor: grabbing !important; user-selec
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ── Tokens de diseño (D1). Fuente única: espaciado, radios, sombras, tipografía y colores de apoyo.
+   Los valores coinciden con los de Tailwind por defecto para no cambiar nada visual. Ver DISENO.md. ── */
+:root {
+  --terracota: #C8492E;
+  --superficie: #FFFFFF;
+
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px;  --space-6: 24px;  --space-8: 32px;  --space-10: 40px; --space-12: 48px;
+
+  --radius-sm: 0.125rem;  --radius-md: 0.375rem;  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;   --radius-2xl: 1rem;     --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  --text-xs: 0.75rem;  --text-sm: 0.875rem;  --text-base: 1rem;
+  --text-lg: 1.125rem; --text-xl: 1.25rem;   --text-2xl: 1.5rem;  --text-3xl: 1.875rem;
+}
+
+:root[data-theme="dark"] {
+  --terracota: #E0684F;
+  --superficie: #1C2029;
+}
+
+/* C2 — Animaciones del visor de IA */
+@keyframes ia-estrella {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  30% { opacity: 1; transform: translate(calc(var(--dx) * 0.45), calc(var(--dy) * 0.45)) scale(1); }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+@keyframes ia-flota {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes ia-respira {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}

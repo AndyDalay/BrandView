@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { AvatarCropper } from './AvatarCropper';
 import { getPerfil, guardarAvatar, guardarNombre, NOMBRE_MAX, urlAvatar, type Perfil } from '@/lib/perfiles';
+import { CloseButton } from './ui/Button';
 
 // Modal "Editar perfil". Título a la izquierda; el resto centrado.
 // Foto circular con botón de editar sobre el borde; nombre editable con botón de guardar
@@ -77,16 +78,7 @@ export function EditProfileModal({
             <h2 id="edit-profile-title" className="font-display text-2xl text-azul-dark">
               Editar perfil
             </h2>
-            <button
-              type="button"
-              data-testid="profile-close"
-              onClick={onClose}
-              disabled={saving}
-              aria-label="Cerrar"
-              className="grid h-9 w-9 place-items-center text-gris-txt-oscuro transition-colors hover:text-azul-dark disabled:opacity-40"
-            >
-              <Icon icon="solar:close-linear" width={22} aria-hidden />
-            </button>
+            <CloseButton data-testid="profile-close" onClick={onClose} disabled={saving} />
           </div>
 
           <div className="mt-4 flex flex-col items-center">

@@ -9,6 +9,7 @@ import { deleteSharedManual } from '../lib/share';
 import { getOrden, hideManual, loadGallery, ordenar, saveOrden, type Gallery, type Manual } from '../lib/gallery';
 import { useTransition } from '../lib/useTransition';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
+import { Button } from '../components/ui/Button';
 import { ShareModal } from '../components/ShareModal';
 import { useMediaQuery } from '../lib/useMediaQuery';
 
@@ -111,30 +112,26 @@ export function Library() {
       <Header>
         <ActionsStagger exiting={exiting}>
           {!esMovil && (
-            <button
-              onClick={() => setAdding(true)}
-              data-testid="add-manual-button"
-              className="flex items-center gap-2 rounded-lg bg-azul px-4 py-2 text-sm text-white shadow hover:bg-azul-mid"
-            >
-              <Icon icon="solar:add-circle-linear" width={20} />
+            <Button icono="solar:add-circle-linear" onClick={() => setAdding(true)} data-testid="add-manual-button">
               Añadir manual
-            </button>
+            </Button>
           )}
         </ActionsStagger>
       </Header>
 
       {/* Móvil: botón flotante abajo a la derecha, al alcance del pulgar. Fuera del header porque el header tiene backdrop-filter */}
       {esMovil && (
-        <button
-          type="button"
+        <Button
+          icono="solar:add-circle-linear"
+          tamano="lg"
+          pill
           onClick={() => setAdding(true)}
           data-testid="add-manual-button"
           aria-label="Añadir manual"
-          className="fixed bottom-6 right-5 z-40 flex items-center gap-2 rounded-full bg-azul px-5 py-3 text-sm text-white shadow-xl hover:bg-azul-mid"
+          className="fixed bottom-6 right-5 z-40 shadow-xl"
         >
-          <Icon icon="solar:add-circle-linear" width={22} />
           Añadir
-        </button>
+        </Button>
       )}
 
 
@@ -256,11 +253,11 @@ function PinCard({
 
           {/* Degradado negro cenizo con grano: corto y translúcido, solo para que el texto blanco se lea */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-md opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            <div className="absolute inset-x-0 bottom-0 h-[64px] bg-gradient-to-t from-[#14171C]/100 to-[#14171C]/40" />
+            <div className="absolute inset-x-0 bottom-0 h-[64px] bg-gradient-to-t from-negro to-negro/40" />
             <div className="grain absolute inset-0" />
             <div className="absolute inset-x-0 bottom-0 p-3">
               <p className="font-display text-base text-white">{manual.nombre}</p>
-              <p className="font-label text-[8px] tracking-[0.16em] text-white/80">{manual.paginas.length} PÁGINAS</p>
+              <p className="font-label text-[10px] tracking-[0.16em] text-white/80">{manual.paginas.length} PÁGINAS</p>
             </div>
           </div>
 

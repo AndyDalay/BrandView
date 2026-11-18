@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { IconButton } from './ui/Button';
 
 // T5 — Grabación de nota de voz para un comentario.
 // Arranca al montarse (el usuario ya pulsó el micrófono). Onda en vivo, tiempo y límite de 60 s.
@@ -120,7 +120,6 @@ export function GrabadorVoz({
 
   useEffect(() => {
     if (segundos >= MAX_SEG) detener();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segundos]);
 
   // Onda: cada tick añade una barra con el volumen actual
@@ -170,26 +169,8 @@ export function GrabadorVoz({
         <span className="h-2 w-2 animate-pulse motion-reduce:animate-none rounded-full bg-terracota" aria-hidden />
         {mmss(segundos)}
       </span>
-      <button
-        type="button"
-        data-testid="voice-stop"
-        aria-label="Terminar y guardar la grabación"
-        title="Terminar"
-        onClick={detener}
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-azul text-white shadow hover:bg-azul-mid"
-      >
-        <Icon icon="solar:diskette-linear" width={16} />
-      </button>
-      <button
-        type="button"
-        data-testid="voice-cancel"
-        aria-label="Cancelar grabación"
-        title="Cancelar"
-        onClick={cancelar}
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-gris-txt-oscuro hover:bg-azul-tint"
-      >
-        <Icon icon="solar:close-linear" width={16} />
-      </button>
+      <IconButton icono="solar:diskette-linear" label="Terminar y guardar la grabación" data-testid="voice-stop" tamano="sm" variante="primaria" onClick={detener} className="rounded-full" />
+      <IconButton icono="solar:close-linear" label="Cancelar grabación" data-testid="voice-cancel" tamano="sm" onClick={cancelar} className="rounded-full" />
     </div>
   );
 }

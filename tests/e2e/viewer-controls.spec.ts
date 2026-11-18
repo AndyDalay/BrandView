@@ -60,6 +60,8 @@ test.describe('Controles del visor', () => {
     const viewer = await openFirstManual(page)
     await expect(viewer.nextPage).toBeEnabled()
 
+    // mouse.down no desplaza la página: si el botón está bajo el pliegue (ventana de 720 px), hay que bajarlo antes
+    await viewer.nextPage.scrollIntoViewIfNeeded()
     const box = await viewer.nextPage.boundingBox()
     if (!box) throw new Error('next-page sin posición visible')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)

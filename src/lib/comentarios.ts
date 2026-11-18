@@ -5,6 +5,8 @@ import { urlAvatar } from '@/lib/perfiles';
 // Capa de datos de comentarios (T3 texto, T5 audio). Tabla `comentarios` según supabase/migrations/0003_comentarios.sql.
 export const TEXTO_MAX = 500;
 const BUCKET_AUDIO = 'comentarios';
+const BUCKET_ADJUNTOS = 'comentarios-adjuntos'; // C1: imagen o PDF (migración 0008)
+export const ADJUNTO_MAX_BYTES = 10 * 1024 * 1024;
 
 export type EstadoComentario = 'pendiente' | 'transcribiendo' | 'listo' | 'error';
 
@@ -15,10 +17,13 @@ export interface Comentario {
   x: number; // 0–1 respecto al ancho de la vista del libro
   y: number; // 0–1 respecto al alto de la vista del libro
   texto: string;
+  html: string | null; // texto con formato (negrita, cursiva, subrayado, enlaces); null si no hay formato
   autorId: string;
   autorNombre: string;
   autorAvatar: string | null; // URL de la miniatura (96 px) o null si no tiene foto
   audioUrl: string | null; // audio original, si el comentario es de voz
+  adjuntoUrl: string | null; // C1: imagen o PDF adjunto
+  adjuntoNombre: string | null;
   estado: EstadoComentario;
   errorMsg: string | null;
   createdAt: string;
@@ -29,7 +34,7 @@ export async function listarComentarios(manualId: string): Promise<Comentario[]>
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('comentarios')
-    .select('id, manual_id, pagina, x, y, texto, autor_id, audio_path, estado, error_msg, created_at')
+    .select('id, manual_id, pagina, x, y, texto, texto_html, autor_id, audio_path, adjunto_path, adjunto_nombre, estado, error_msg, created_at')
     .eq('manual_id', manualId)
     .order('created_at', { ascending: true });
   if (error) throw new Error('No se pudieron cargar los comentarios.');
@@ -57,6 +62,7 @@ export async function listarComentarios(manualId: string): Promise<Comentario[]>
 
   return filas.map((f) => {
     const audioPath = (f.audio_path as string | null) ?? null;
+    const adjuntoPath = (f.adjunto_path as string | null) ?? null;
     return {
       id: f.id as string,
       manualId: f.manual_id as string,
@@ -64,10 +70,13 @@ export async function listarComentarios(manualId: string): Promise<Comentario[]>
       x: Number(f.x),
       y: Number(f.y),
       texto: f.texto as string,
+      html: (f.texto_html as string | null) ?? null,
       autorId: f.autor_id as string,
       autorNombre: nombres.get(f.autor_id as string) ?? 'Anónimo',
       autorAvatar: avatares.get(f.autor_id as string) ?? null,
       audioUrl: audioPath ? supabase!.storage.from(BUCKET_AUDIO).getPublicUrl(audioPath).data.publicUrl : null,
+      adjuntoUrl: adjuntoPath ? supabase!.storage.from(BUCKET_ADJUNTOS).getPublicUrl(adjuntoPath).data.publicUrl : null,
+      adjuntoNombre: (f.adjunto_nombre as string | null) ?? null,
       estado: (f.estado as EstadoComentario) ?? 'listo',
       errorMsg: (f.error_msg as string | null) ?? null,
       createdAt: f.created_at as string,
@@ -76,26 +85,57 @@ export async function listarComentarios(manualId: string): Promise<Comentario[]>
 }
 
 /** Crea un comentario de texto. Usa la sesión actual o una anónima nueva. */
-export async function crearComentario(input: { manualId: string; pagina: number; x: number; y: number; texto: string }): Promise<void> {
+export async function crearComentario(input: {
+  manualId: string;
+  pagina: number;
+  x: number;
+  y: number;
+  texto: string;
+  html?: string;
+  adjunto?: File; // C1: imagen o PDF, opcional
+}): Promise<void> {
   if (!supabase) throw new Error('Supabase no está configurado.');
   const texto = input.texto.trim();
-  if (texto.length < 1 || texto.length > TEXTO_MAX) {
-    throw new Error(`El comentario debe tener entre 1 y ${TEXTO_MAX} caracteres.`);
+  if (texto.length > TEXTO_MAX) throw new Error(`El comentario no puede pasar de ${TEXTO_MAX} caracteres.`);
+  if (texto.length < 1 && !input.adjunto) throw new Error('Escribe un comentario o adjunta un archivo.');
+  const session = await ensureSession();
+  const uid = session?.user.id;
+  if (!uid) throw new Error('No se pudo iniciar la sesión.');
+
+  const id = crypto.randomUUID();
+  let adjunto: { path: string; nombre: string; tipo: string } | null = null;
+  if (input.adjunto) {
+    const f = input.adjunto;
+    if (f.size > ADJUNTO_MAX_BYTES) throw new Error('El archivo supera los 10 MB.');
+    const tipo = f.type.split(';')[0];
+    const nombre = f.name.slice(0, 120) || 'adjunto';
+    const ext = (nombre.includes('.') ? nombre.split('.').pop() ?? '' : '').toLowerCase().replace(/[^a-z0-9]/g, '') || (tipo === 'application/pdf' ? 'pdf' : 'bin');
+    const path = `${uid}/${id}.${ext}`;
+    const { error: errSubida } = await supabase.storage.from(BUCKET_ADJUNTOS).upload(path, f, { contentType: tipo, upsert: false });
+    if (errSubida) throw new Error('No se pudo subir el archivo. Revisa la conexión.');
+    adjunto = { path, nombre, tipo };
   }
-  await ensureSession();
+
   const { data, error } = await supabase
     .from('comentarios')
     .insert({
+      id,
       manual_id: input.manualId,
       pagina: input.pagina,
       x: input.x,
       y: input.y,
       texto,
+      texto_html: input.html && input.html !== texto ? input.html : null,
+      adjunto_path: adjunto?.path ?? null,
+      adjunto_nombre: adjunto?.nombre ?? null,
+      adjunto_tipo: adjunto?.tipo ?? null,
       estado: 'listo',
     })
     .select('id');
-  if (error) throw new Error('No se pudo guardar el comentario. Inténtalo de nuevo.');
-  if (!data || data.length === 0) throw new Error('No se pudo guardar el comentario.');
+  if (error || !data || data.length === 0) {
+    if (adjunto) await supabase.storage.from(BUCKET_ADJUNTOS).remove([adjunto.path]); // no dejar adjuntos huérfanos
+    throw new Error('No se pudo guardar el comentario. Inténtalo de nuevo.');
+  }
 }
 
 /**
@@ -177,7 +217,14 @@ export async function transcribirComentario(id: string): Promise<{ estado: Estad
 /** Borra un comentario propio. La política RLS impide borrar los ajenos. */
 export async function borrarComentario(id: string): Promise<void> {
   if (!supabase) throw new Error('Supabase no está configurado.');
+  // Antes de borrar la fila, leemos las rutas de sus archivos para limpiarlos después
+  const { data: antes } = await supabase.from('comentarios').select('audio_path, adjunto_path').eq('id', id).maybeSingle();
   const { data, error } = await supabase.from('comentarios').delete().eq('id', id).select('id');
   if (error) throw new Error('No se pudo borrar el comentario.');
   if (!data || data.length === 0) throw new Error('No tienes permiso para borrar este comentario.');
+  // Limpieza best-effort: si falla, el comentario ya está borrado y no es grave
+  const audio = (antes?.audio_path as string | null) ?? null;
+  const adjunto = (antes?.adjunto_path as string | null) ?? null;
+  if (audio) await supabase.storage.from(BUCKET_AUDIO).remove([audio]).catch(() => undefined);
+  if (adjunto) await supabase.storage.from(BUCKET_ADJUNTOS).remove([adjunto]).catch(() => undefined);
 }

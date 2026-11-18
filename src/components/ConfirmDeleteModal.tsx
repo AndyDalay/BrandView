@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Icon } from '@iconify/react';
+import { Button } from './ui/Button';
 
 // Confirmación de borrado (local) u ocultado (manual de la galería base).
 // Mismo lenguaje visual que ShareModal y AddManualModal.
@@ -23,8 +23,11 @@ export function ConfirmDeleteModal({
       if (e.key === 'Escape' && !busy) onCancel();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+
+  return () => window.removeEventListener('keydown', onKey);
   }, [busy, onCancel]);
+
+  const tipoTexto = tipo === 'base' ? 'Ocultar' : 'Borrar';
 
   return (
     <div
@@ -47,25 +50,10 @@ export function ConfirmDeleteModal({
         </p>
 
         <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            data-testid="delete-confirm-cancel"
-            onClick={onCancel}
-            disabled={busy}
-            className="rounded-lg border border-gris-line bg-white px-4 py-2 text-sm text-azul-dark hover:bg-azul-tint disabled:opacity-40"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            data-testid="delete-confirm-ok"
-            onClick={onConfirm}
-            disabled={busy}
-            className="flex items-center gap-2 rounded-lg bg-terracota px-4 py-2 text-sm text-white shadow hover:opacity-90 disabled:opacity-50"
-          >
-            <Icon icon="solar:trash-bin-minimalistic-linear" width={18} />
-            {busy ? 'Procesando…' : tipo === 'base' ? 'Ocultar' : 'Borrar'}
-          </button>
+          <Button variante="secundaria" data-testid="delete-confirm-cancel" onClick={onCancel} disabled={busy}>Cancelar</Button>
+          <Button variante="peligro" data-testid="delete-confirm-ok" onClick={onConfirm} disabled={busy} icono="solar:trash-bin-minimalistic-linear">
+            {tipoTexto}
+          </Button>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@
 
 ## 📍 Dónde estamos
 
-- **Sesión:** Planificación de **Comentarios con audio + transcripción** (nueva tarea principal). Header, modal de borrado, controles y sombras del visor **cerrados**.
+- **Sesión (2026-11-09):** Fix de las flechas del visor (`PageArrowButton`, V5b) barra de información del manual (V4) y configuración en el menú de perfil (V9). Pendiente de verificar en navegador. Header, modal de borrado, controles y sombras del visor **cerrados**.
 - **Rama:** `diseno`.
 - **Flujo de ramas:** `diseno` → `dev` → `produccion`. Vercel publica `produccion`; `dev` y `diseno` generan previews.
 - **Puerto de desarrollo:** `3000` fijo (Figma Make y Playwright lo necesitan).
@@ -371,3 +371,144 @@ Tarea de esta sesión: [descripción]
 ## Lote de tareas nuevo
 - Especificaciones y casillas en `TAREAS.md`. Al resolver un punto se borra su especificación y se marca.
 - Hecho en esta sesión: M1, M2, M3.
+
+## D1 — Tokens de diseño (2026-11-08)
+- Tokens en `src/index.css` y mapeo a Tailwind en `tailwind.config.ts`. Documentación en `DISENO.md`.
+- Valores iguales a los de Tailwind por defecto: sin cambio visual.
+- Pendiente: migrar los valores sueltos de los componentes (se hará junto con D2/D3).
+- Quitado el aviso "access_token recibido" del diagnóstico de login.
+
+## D2 — Componentes base de botones (2026-11-08)
+- `src/components/ui/Button.tsx`: `Button` (variantes primaria, secundaria, fantasma; tamaños sm, md, lg; iconos Solar a izquierda o derecha; estado `cargando` con spinner CSS), `IconButton` (solo icono, `label` obligatorio) y `CloseButton` (solo cruz).
+- Migrados los botones de cerrar de AddManualModal, ShareModal y EditProfileModal. Conservan sus `data-testid`.
+- Pendiente: migrar el resto de botones (cabecera del visor, CommentLayer, GrabadorVoz, Header, Library) a estos componentes. Se hará en D3.
+
+## D3 — Migración de botones (2026-11-08, parcial)
+- Migrados a `IconButton`/`Button`/`CloseButton`: visor, campana de la cabecera, comentarios y grabador. Auditoría y lista pendiente en `DISENO.md`.
+- D3 (siguiente tramo): biblioteca y modal de borrar migrados; variante `peligro` y prop `pill` en `Button`.
+
+## V1–V3 — Modal de configuración (2026-11-08)
+- `src/lib/ajustes.ts`: volumen (0–200 %) y notificaciones en localStorage, con evento de cambio y hook `useAjustes`.
+- `src/lib/sound.ts`: el sonido de página pasa a Web Audio para llegar al 200 %. 100 % = nivel original (0.7).
+- `src/components/SettingsModal.tsx`: tema (switch), notificaciones (switch, preferencia guardada) y volumen (slider). Se abre con el engranaje de la cabecera.
+- Quitados de la cabecera: bocina (el silencio es volumen 0) y switch de tema.
+- Pendiente de prueba: que el sonido suene al 200 % en navegadores móviles (iOS exige un gesto del usuario para iniciar Web Audio).
+
+## C1 — Adjuntar en el editor (2026-11-08, parcial)
+- Botón de clip con menú "Hacer foto" (cámara) y "Subir archivo" (imagen o PDF). Valida tipo y tamaño (10 MB) y muestra el nombre con opción de quitarlo.
+- Pendiente: guardar el adjunto con el comentario (migración 0006: columna `adjunto_path` y reutilizar el bucket `comentarios`).
+- Iconos Solar nuevos usados: `solar:paperclip-linear`, `solar:camera-linear`, `solar:upload-linear`. Comprobar que existen en el bundle.
+
+## S1–S2 — Aviso de compartido y valoraciones (2026-11-08)
+- Migración nueva: `supabase/migrations/0006_valoraciones.sql` (tabla `valoraciones`, un voto por usuario y manual; lectura pública, votar solo con sesión). **Aplicar en el SQL Editor.**
+- `src/lib/valoraciones.ts`: listar y votar. `src/components/ShareNotice.tsx`: foto y nombre de quien comparte, fecha, y botones me gusta / no me gusta. Tras votar, los botones desaparecen y queda el contador.
+- Solo aparece en manuales compartidos (`remoto`).
+- Pendiente: cambiar el voto (no está en esta versión).
+
+## C3 — Formato del texto en comentarios (2026-11-08)
+- Migración nueva: `supabase/migrations/0007_comentarios_formato.sql` (columna `texto_html`). **Aplicar en el SQL Editor.**
+- `src/lib/formatoTexto.ts`: sanitizador con lista blanca (b, i, u, br, a con http/https). `htmlATexto` para el texto plano.
+- `src/components/EditorFormato.tsx`: editor contenteditable; barra flotante al seleccionar (negrita, cursiva, subrayado, enlace, quitar enlace). Borrar dentro de un enlace lo quita primero y deja el texto seleccionado.
+- Se guarda `texto` (plano) y `texto_html` (solo si hay formato). El panel muestra el HTML sanitizado.
+- Pendiente de prueba: `comentarios.spec.ts` usa `fill()` sobre el editor; Playwright admite contenteditable, pero conviene confirmarlo.
+
+## C2 — Redactar con IA (2026-11-08, parcial)
+- `api/redactar.ts`: POST `{prompt, adjunto?}` con token de sesión. Modelo `llama-3.1-8b-instant` (texto) y `meta-llama/llama-4-scout-17b-16e-instruct` (imagen), vía `GROQ_API_KEY`. Máx. 500 caracteres de salida.
+- `src/components/AnimacionIA.tsx`: visor animado provisional (gradiente en el contorno, brillo eléctrico, fondo radial, estrellas de 4 puntas). Estados: reposo, escribiendo, pensando, subiendo.
+- `src/components/IaComentarioModal.tsx`: título "Comentar con IA", frases sugeridas, adjunto de imagen o PDF, resultado con negritas de `**…**` y botón "Usar este texto", que inserta en el editor.
+- PDF: `api/redactar.ts` extrae el texto con `pdfjs-dist/legacy/build/pdf.mjs` (import diferido; hasta 15 páginas y 6000 caracteres) y lo pasa al modelo de texto como material. Un PDF sin texto (escaneado) responde 400 con `codigo: 'adjunto'`. Máx. 3 MB. No probado aún: hay que comprobar en Vercel que pdf.js carga en Node sin worker.
+- Pendiente: revisar el diseño final de la animación.
+- Los iconos `solar:magic-stick-3-linear` y `solar:paperclip-linear` deben existir en el bundle.
+
+## D3 — Cierre (2026-11-08)
+- Colores fijos y tamaños con corchetes sustituidos por tokens (ver `DISENO.md`). Pendiente en una tarea aparte: menú de perfil de la cabecera (`Button` fantasma) y un `Switch` del sistema para el tema.
+
+## C1 — Adjuntos en comentarios (2026-11-08)
+- Migración `0008_comentarios_adjuntos.sql` (pendiente de aplicar en Supabase): columnas `adjunto_path`, `adjunto_nombre`, `adjunto_tipo` y bucket público `comentarios-adjuntos` (10 MB; imágenes y PDF). Subida solo a la carpeta `auth.uid()`.
+- `src/lib/comentarios.ts`: `crearComentario` acepta `adjunto?: File`, lo sube antes de insertar y lo borra si el insert falla. Un comentario puede ser solo adjunto (sin texto). `listarComentarios` devuelve `adjuntoUrl` y `adjuntoNombre`.
+- `src/components/CommentLayer.tsx`: el panel muestra el adjunto como enlace (`comment-attachment-link`). Se corrigieron dos errores de compilación: un `{` dentro de paréntesis en el panel y un import de `Button` duplicado.
+- Al borrar un comentario se limpian su audio y su adjunto del bucket (best-effort). La migración 0008 añade permisos de borrado en Storage para la carpeta propia, que también usa el rollback.
+
+## Login Google: decisión (2026-11-08)
+- Se elige limpiar la identidad de prueba en Supabase (Authentication > Users) en lugar de cambiar `signInWithGoogle`. Sin cambios de código. Pendiente de verificar: que el `user.id` se conserve tras entrar con Google.
+
+## Estado 2026-11-09 — migraciones pendientes y tests
+- Tests Playwright en Windows: comentarios (3/3), móvil T8 (2/2), login P2 (3/3), galería, perfil y compartir pasan. Quedan `viewer-controls` "mantener pulsado next-page" (falla siempre: el avance al mantener no arranca; pendiente de diagnóstico con captura o `elementFromPoint`) y `viewer.spec` "abre el manual" (intermitente bajo carga; pasa en solitario).
+- Supabase: la tabla `comentarios` NO tiene aún `texto_html`, `adjunto_path`, `adjunto_nombre` ni `adjunto_tipo`. Hay que aplicar `0007_comentarios_formato.sql` y `0008_comentarios_adjuntos.sql` en este orden. Sin ellas la lista de comentarios falla ("No se pudieron cargar los comentarios.").
+- `valoraciones` (0006): por confirmar con `select * from public.valoraciones limit 1;`.
+
+## Lote de tareas nuevas y arreglos (2026-11-09)
+- Especificaciones de V4–V11 (visor y cabecera) y C4–C7 (comentarios, incluido panel de incidencias) añadidas a `TAREAS.md`. Cada una lleva su bloque de especificación, que se borra al resolverla.
+- Arreglado ya: S3 (el aviso de compartido no sale en manuales propios), V8 (logo +20 %, `h-[38px]`), V7a (hover de notificaciones igual que el resto).
+- Pendiente de decisión: C7 necesita migración 0009 (tabla de incidencias y permiso de administrador). Admin inicial: `andyydalay4@gmail.com`.
+- V10: la conversión de volumen en `gbv-ajustes` debe hacerse al leer (interno / 2).
+- Skill `.claude/SKILL.md` actualizado: leer `TAREAS.md` al empezar y borrar el bloque de especificación al cerrar una tarea.
+
+## V5 y V6 (2026-11-09)
+- V5: `BookViewer` ignora el inicio del mantener pulsado cuando no hay página en esa dirección, y el botón deshabilitado no muestra hover ni cursor de pulsable.
+- V6: el botón atrás pasa a ser el primero de la barra del visor, solo icono (`solar:undo-left-round-linear`, data-testid `back-button`). Pendiente de confirmar que el icono existe en el bundle de Solar; si no, usar `solar:arrow-left-linear`.
+
+## V5b — Flechas del visor como componente (2026-11-09)
+- Nuevo `src/components/ui/PageArrowButton.tsx`: componente de React con dos estados separados.
+  - **Inactivo** (portada en ◀, contraportada en ▶): sin fondo blanco ni sombra, trazo `text-gris-txt` (más claro que el azul activo en claro y oscuro), cursor `default`. Usa `aria-disabled`.
+  - **Girando:** el botón no cambia de aspecto ni de cursor. Las pulsaciones durante el giro las ignora el visor.
+- `BookViewer.tsx`: se usa el componente en los dos lados. Se separan `hayPrev`/`hayNext` (hay página, para el aspecto) de `canPrev`/`canNext` (se puede iniciar un giro). Se quitan `disabled` y `disabled:cursor-not-allowed`.
+- Causa del cursor cancelado al mantener pulsado: `disabled={!canNext}` se activaba durante cada giro. Al deshabilitarse el botón, el navegador dejaba de enviar eventos de puntero y el cursor se quedaba bloqueado. Ya no ocurre, porque el botón no se deshabilita durante el giro.
+- Limpieza de lint en `BookViewer.tsx`: se quitaron `Icon` (ya no se usa) y `rightOn` (variable sin uso, ya estaba en el original).
+- Verificado en esta sesión: `tsc --noEmit` exit 0; `eslint` sobre `BookViewer.tsx` y `PageArrowButton.tsx` exit 0. Sin verificar en navegador.
+- **Pendiente de verificar (Windows):** flechas en portada y contraportada (sin fondo, trazo gris, cursor normal); mantener pulsado ▶ durante varias páginas sin que el cursor cambie; en tema oscuro, contraste del trazo inactivo. Ejecutar `npx playwright test tests/e2e/viewer-controls.spec.ts --project=chromium` (el caso «mantener pulsado next-page» debería empezar a pasar).
+- **Riesgo:** `Button.tsx` (base) sigue con `disabled:cursor-not-allowed`. Afecta a los botones `Button`/`IconButton` deshabilitados. No se tocó porque no lo pidió esta tarea; decidir si se aplica el mismo criterio.
+- **Lint (2026-11-09):** resuelto. Se quitaron los imports sin uso de `CommentLayer.tsx` (`TEXTO_MAX`), `ConfirmDeleteModal.tsx` y `GrabadorVoz.tsx` (`Icon`), y la directiva `eslint-disable` sobrante de `GrabadorVoz.tsx`. `npm run lint` pasa en 0 (verificado en Windows por el usuario: 4 errores antes del fix).
+
+**▶ Siguiente:** comprobar las flechas en navegador (Windows) y, si va bien, seguir con el siguiente punto de `TAREAS.md`.
+
+## V4 — Barra de información del manual (2026-11-09)
+- Nuevo `src/components/TopInfoManual.tsx`, sustituye a `ShareNotice` (eliminado) en `Viewer.tsx`. Se muestra en todos los manuales, también en los propios.
+- Izquierda: avatar (`UserAvatar`, 36 px), «Subido por NOMBRE» y fecha y hora debajo. Derecha: contador de me gusta (`share-like-count`) y, al acercar el cursor, los pulgares (`vote-like`, `vote-dislike`). Tras votar, los pulgares desaparecen y el contador resalta tu voto.
+- Ocultación: los pulgares se ocultan 1,5 s después de salir del cursor si no se ha votado. Con foco de teclado se muestran igual. El temporizador se limpia al desmontar.
+- Autor: «ti» si el manual es tuyo (compartido por ti o local en este equipo); «GrandBrandView» en los de `/public`; si no, el nombre del perfil que lo compartió.
+- Ancho: una página del libro, centrado. Se calcula con `anchoPagina` en `src/lib/bookSize.ts`, que comparte la fórmula de `bookSize` con `BookViewer`. Por eso `bookSize` y `anchoPagina` salieron de `BookViewer.tsx` (el lint de React Refresh no admite exportar funciones junto a componentes).
+- `gallery.ts`: `Manual.subidoEn` (fecha de subida de los manuales locales, desde `createdAt` de IndexedDB).
+- Decisiones a confirmar: (1) los manuales de `/public` no tienen fecha, así que solo muestran autor; (2) en manuales que no son compartidos también se puede votar. La tabla `valoraciones` no tiene clave foránea a `manuales`, así que el voto se guarda igual. Si no lo quieres, se oculta el voto cuando `!remoto`.
+- Verificado: `tsc --noEmit` exit 0; lint de los archivos tocados exit 0. Sin verificar en navegador.
+- **Pendiente de verificar:** alineación de la fila con una página en escritorio (1024 px) y móvil (360×800); que la fecha se vea en la zona horaria local; aplicar `0006_valoraciones.sql` en Supabase antes de probar los votos.
+- **Test a actualizar:** si algún test esperaba `share-notice`, ya no existe. Ninguno lo usa ahora.
+
+**▶ Siguiente:** verificar la barra en navegador (escritorio y móvil) y decidir si el voto se permite en manuales no compartidos.
+
+## V9 — Configuración desde el perfil (2026-11-09)
+- `src/components/Header.tsx`: se quita el engranaje (`settings-button`). «Configuración» (`settings-menu-button`) está en el menú de perfil (`user-menu-button`).
+- Con cuenta Google: `session-state` con Editar perfil, Configuración, separador y Cerrar sesión (sin cambios de testid).
+- Sin cuenta: se muestra un menú de perfil con solo Configuración (`guest-menu`). Antes, sin cuenta no había forma de abrir Configuración desde el header. Así no quedó sin acceso. El botón de Iniciar Sesión sigue igual.
+- Cambio interno: el menú busca sus elementos por `role="menuitem"` (sustituye al array `itemsRef`), así que las flechas funcionan con cualquier número de opciones.
+- Verificado: `tsc --noEmit` exit 0; lint de `Header.tsx` exit 0. Sin verificar en navegador.
+- **Pendiente de verificar:** con cuenta Google (editar, configuración, cerrar sesión, flechas) y sin cuenta (solo configuración; sin errores en consola); móvil 360×800 con el menú abierto.
+
+**▶ Siguiente:** verificar el menú de perfil en navegador. Después, siguiente pendiente de `TAREAS.md`.
+
+## Diagnóstico «mantener pulsado next-page» (2026-11-09)
+- Causa: el test, no la app. En ventana de 1280×720, el botón ▶ queda en `y = 744`, fuera de la pantalla. `mouse.down()` sobre esa coordenada no entrega el `pointerdown` al botón, así que el avance nunca arrancaba. `click()` sí desplaza la página, por eso los demás tests pasaban.
+- Fix: `viewer.nextPage.scrollIntoViewIfNeeded()` antes de leer la posición en `tests/e2e/viewer-controls.spec.ts`.
+- Resultado en sandbox (chromium, 1 worker): `viewer-controls.spec.ts` 4/4 pasan. En Windows, con 1 worker, 3/4 pasaban antes del fix; el 4.º era este caso.
+- Con 4 workers en Windows, los 4 casos fallaban por carga (el indicador no se estabilizaba). Usar `--workers=1` para esta suite hasta revisar la carga.
+- **Pendiente de decisión (UX):** en pantallas de 720 px de alto, las flechas del visor quedan bajo el pliegue. Hay que bajar la página para pasar páginas. Decidir si el libro se ajusta al alto de la ventana o si las flechas van a los laterales.
+- **Pendiente de verificar en Windows:** `npx playwright test tests/e2e/viewer-controls.spec.ts --project=chromium --workers=1`.
+
+## V5c — Flechas laterales en tablet (2026-11-09)
+- Decisión del usuario: en tablet, las flechas van a los lados del libro. Motivo: en pantallas bajas, debajo del libro quedan fuera de la vista.
+- Rango tablet: `TABLET_QUERY = (min-width: 768px) and (max-width: 1279px)` (`src/lib/bookSize.ts`). Fuera de ese rango, las flechas siguen debajo.
+- El libro en tablet ocupa `calc(100vw - 220px)` como máximo (`vwEscritorio`), dejando 110 px a cada lado. `anchoPagina` (barra de información) usa el mismo ancho, así que cuadran.
+- `BookViewer.tsx`: `flechaAnterior` y `flechaSiguiente` se definen una vez y se renderizan en un lugar u otro según `lateral`. Con `display: contents` fuera de tablet, el layout no cambia.
+- Verificado en sandbox (chromium, 1024×768): ◀ en x=54, ▶ en x=926, libro en x=110–914, sin solape. Captura revisada: portada con ◀ apagado (trazo gris, sin fondo).
+- Verificado: `tsc` exit 0; lint exit 0.
+- **Pendiente de verificar en Windows:** tablet real (iPad 768×1024 y 1024×768) en vertical y horizontal; que la portada desplazada no tape la flecha; que el giro con la flecha lateral y con mantener pulsado sigue funcionando.
+- **Pendiente de decisión:** en portátil 1280×720 las flechas siguen debajo, fuera de la vista. Sin cambios hasta que lo decidas.
+
+## V11, cabecera sticky y campana duplicada (2026-11-09)
+- **V11 — Mostrar anuncios:** nuevo ajuste `mostrarAnuncios` en `src/lib/ajustes.ts`, desactivado por defecto. En `SettingsModal` aparece como switch (`ads-switch`). En `Viewer.tsx` el banner solo se renderiza si está activado. El spec anterior de V11 decía lo contrario; se cambió por petición del usuario.
+- **Cabecera:** `Header.tsx` pasa de `fixed` a `sticky top-0 z-40 w-full`, y se elimina el espaciador `h-[72px]`. Así el contenido empieza siempre debajo del header (sin depender de una altura duplicada a mano) y, al hacer scroll, el header queda encima.
+- **Campana duplicada:** había dos `notifications-button` idénticos en `Header.tsx`. Se deja uno.
+- **Banner «tapado»:** no lo reproduje en el sandbox (360×800 y 1024×768: el banner empieza en y=88, debajo del header en y=72). La causa probable era el `fixed` con el espaciador, ahora eliminados. Pendiente de confirmar en Windows.
+- Verificado en sandbox (chromium): sin ajuste, no hay banner y el título está en y=209; con ajuste, el banner está en y=88; con scroll en 360×500, el header está en top=0 y es el elemento que recibe el clic en la parte superior. `tsc` y lint exit 0.
+- **Pendiente de verificar en Windows:** el switch de Configuración (activar y desactivar el banner); el header al hacer scroll en la biblioteca y en el visor; móvil 360×800.
+- **Riesgo conocido, no causado por este cambio:** `library.spec.ts` › «muestra la galería y el botón de añadir» falla en el sandbox por timeout de 5 s al cargar la galería en frío. Falla igual con la cabecera anterior. Revisar en Windows; si persiste, subir el timeout de espera de `gallery` o esperar a `manifest.json`.

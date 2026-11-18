@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Icon } from '@iconify/react';
 import { saveManual, type StoredManual } from '../lib/db';
 import { manualFromFolder, manualFromPdf } from '../lib/manualBuilder';
+import { CloseButton } from './ui/Button';
 
 export function AddManualModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
   const pdfRef = useRef<HTMLInputElement>(null);
@@ -68,14 +69,7 @@ export function AddManualModal({ onClose, onAdded }: { onClose: () => void; onAd
               La primera página será la portada y la última la contraportada.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            disabled={busy}
-            aria-label="Cerrar"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gris-txt-oscuro hover:bg-azul-tint disabled:opacity-40"
-          >
-            <Icon icon="solar:close-linear" width={20} />
-          </button>
+          <CloseButton onClick={onClose} disabled={busy} />
         </div>
 
         {busy ? (

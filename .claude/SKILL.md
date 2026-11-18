@@ -24,15 +24,17 @@ No trabajas en paralelo con otros Claudes.
    - Si tienes conectado Google Drive, lee la versión más reciente de `STATE.md` en `Mi unidad/Carpeta PUBLICA/STATE-FOLDER/GrandBrandView-Proyecto/STATE.md` y úsala como fuente de verdad.
    - Si no tienes Drive conectado, pide al usuario que pegue el `STATE.md` o suba el zip del proyecto. No inventes el estado.
 2. **Lee `STATE.md`** → te dice exactamente dónde quedó la sesión anterior, qué está hecho y qué te toca.
-3. **Lee `PLAN.md`** si es una tarea nueva o si necesitas contexto del roadmap.
-4. **Confirma al usuario** en 2-3 líneas qué entiendes que tienes que hacer.
-5. Implementa la solución.
+3. **Lee `TAREAS.md`** → es la lista viva. Cada tarea pendiente tiene su especificación debajo. Trabaja solo lo que pida el usuario y respeta la especificación al pie de la letra.
+4. **Lee `PLAN.md`** si es una tarea nueva o si necesitas contexto del roadmap.
+5. **Confirma al usuario** en 2-3 líneas qué entiendes que tienes que hacer.
+6. Implementa la solución.
 
 ---
 
 ## LO ÚLTIMO que haces en CADA respuesta / entrega de tarea
 
 1. **Actualiza `STATE.md`** reflejando las tareas completadas, las decisiones tomadas y los siguientes pasos.
+1b. **Cierra las tareas en `TAREAS.md`:** al resolver una tarea, marca su casilla, mueve la entrada a «Hecho» y **borra su bloque de especificación**. Lo que quede en la lista es lo pendiente.
 2. **Empaqueta todos los archivos creados o modificados** (incluyendo obligatoriamente el `STATE.md` actualizado y las carpetas necesarias, como `src/`).
 3. **Nombra el `.zip` resultante** estrictamente con el formato `flowzip-xxxxxxxx.zip` (donde `xxxxxxxx` es un hash o nombre descriptivo corto, ej: `flowzip-navbarfix.zip` o `flowzip-a8f9d3b1.zip`).
 4. Entrega la descarga al usuario. Su sistema automatizado interceptará el `.zip`, lo moverá a la carpeta local del proyecto y sincronizará el `STATE.md` en Google Drive.

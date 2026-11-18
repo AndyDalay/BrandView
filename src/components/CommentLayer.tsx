@@ -5,13 +5,16 @@ import {
   crearComentario,
   crearComentarioVoz,
   listarComentarios,
-  TEXTO_MAX,
   transcribirComentario,
   type Comentario,
 } from '@/lib/comentarios';
 import { getCurrentUser } from '@/lib/auth';
 import { UserAvatar } from './UserAvatar';
 import { GrabadorVoz } from './GrabadorVoz';
+import { EditorFormato } from './EditorFormato';
+import { IaComentarioModal } from './IaComentarioModal';
+import { sanitizarHtml } from '../lib/formatoTexto';
+import { Button, CloseButton, IconButton } from './ui/Button';
 
 // Capa de comentarios sobre el libro (texto y voz). Se monta encima de BookViewer sin tocarlo.
 // La página actual se lee del indicador "n / total" del visor.
@@ -54,7 +57,12 @@ export function CommentLayer({
   const [uid, setUid] = useState<string | null>(null);
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   const [texto, setTexto] = useState('');
+  const [html, setHtml] = useState('');
+  const [iaAbierta, setIaAbierta] = useState(false);
+  const [insertado, setInsertado] = useState<{ valor: string; version: number } | undefined>(undefined);
   const [grabando, setGrabando] = useState(false);
+  const [menuAdjuntar, setMenuAdjuntar] = useState(false);
+  const [adjunto, setAdjunto] = useState<File | null>(null); // C1: adjunto elegido (aún no se guarda en el servidor)
   const [abierto, setAbierto] = useState<string | null>(null);
   const [fallos, setFallos] = useState<Record<string, string>>({}); // motivo del último fallo de transcripción, por id
   const [enCurso, setEnCurso] = useState<Record<string, number>>({}); // petición abierta desde este navegador: id → hora de inicio
@@ -64,6 +72,8 @@ export function CommentLayer({
   const [error, setError] = useState<string | null>(null);
   const [hablando, setHablando] = useState(false); // reproduciendo nota de voz o leyendo texto
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // Al desmontar la capa se calla todo
   useEffect(() => () => { audioRef.current?.pause(); window.speechSynthesis?.cancel(); }, []);
@@ -106,7 +116,11 @@ export function CommentLayer({
 
   // Al cerrar el borrador se para cualquier grabación
   useEffect(() => {
-    if (!borrador) setGrabando(false);
+    if (!borrador) {
+      setGrabando(false);
+      setAdjunto(null);
+      setMenuAdjuntar(false);
+    }
   }, [borrador]);
 
   // Escape cierra lo que esté abierto
@@ -120,6 +134,26 @@ export function CommentLayer({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [borrador, abierto, modo, grabando, onSalirModo]);
+
+  // C1: validación básica del adjunto (imagen o PDF, máx. 10 MB)
+  function elegirAdjunto(archivo: File | null) {
+    setMenuAdjuntar(false);
+    if (!archivo) {
+      setAdjunto(null);
+      return;
+    }
+    const valido = archivo.type.startsWith('image/') || archivo.type === 'application/pdf';
+    if (!valido) {
+      setError('Solo se pueden adjuntar imágenes o PDF.');
+      return;
+    }
+    if (archivo.size > 10 * 1024 * 1024) {
+      setError('El archivo supera los 10 MB.');
+      return;
+    }
+    setError(null);
+    setAdjunto(archivo);
+  }
 
   function onClickCapa(e: MouseEvent<HTMLDivElement>) {
     if (!modo || busy) return;
@@ -140,9 +174,10 @@ export function CommentLayer({
     setBusy(true);
     setError(null);
     try {
-      await crearComentario({ manualId, pagina: borrador.pagina, x: borrador.x, y: borrador.y, texto });
+      await crearComentario({ manualId, pagina: borrador.pagina, x: borrador.x, y: borrador.y, texto, html, adjunto: adjunto ?? undefined });
       setBorrador(null);
       setTexto('');
+      setAdjunto(null);
       onSalirModo();
       cargar();
     } catch (e) {
@@ -325,17 +360,31 @@ export function CommentLayer({
             <UserAvatar url={fotoDe(seleccionado)} nombre={seleccionado.autorNombre} size={32} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-azul-dark">{seleccionado.autorNombre}</p>
-              <p className="text-[11px] leading-tight text-gris-txt">{fecha(seleccionado.createdAt)}</p>
+              <p className="text-xs leading-tight text-gris-txt">{fecha(seleccionado.createdAt)}</p>
             </div>
-            <button type="button" aria-label="Cerrar" onClick={() => { callarVoz(); setAbierto(null); }} className="grid h-7 w-7 shrink-0 place-items-center text-gris-txt-oscuro hover:text-azul-dark">
-              <Icon icon="solar:close-linear" width={18} />
-            </button>
+            <CloseButton tamano="sm" onClick={() => { callarVoz(); setAbierto(null); }} />
           </div>
 
           {seleccionado.estado === 'listo' && (
-            <p data-testid="comment-text" className="mt-3 whitespace-pre-wrap text-sm text-gris-txt-oscuro">
-              {seleccionado.texto || (seleccionado.audioUrl ? 'Nota de voz sin texto.' : '')}
-            </p>
+            seleccionado.html ? (
+              <div data-testid="comment-text" className="mt-3 whitespace-pre-wrap text-sm text-gris-txt-oscuro [&_a]:text-azul [&_a]:underline" dangerouslySetInnerHTML={{ __html: sanitizarHtml(seleccionado.html) }} />
+            ) : (
+              <p data-testid="comment-text" className="mt-3 whitespace-pre-wrap text-sm text-gris-txt-oscuro">
+                {seleccionado.texto || (seleccionado.audioUrl ? 'Nota de voz sin texto.' : '')}
+              </p>
+            )
+          )}
+          {seleccionado.adjuntoUrl && (
+            <a
+              data-testid="comment-attachment-link"
+              href={seleccionado.adjuntoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 flex items-center gap-s2 rounded-lg bg-gris-bg/60 px-s3 py-s2 text-xs text-azul-dark hover:bg-azul-tint"
+            >
+              <Icon icon="solar:paperclip-linear" width={16} aria-hidden />
+              <span className="truncate">{seleccionado.adjuntoNombre ?? 'Adjunto'}</span>
+            </a>
           )}
           {enProceso(seleccionado) && !conProblema(seleccionado, fallos, enCurso) && (
             <div className="mt-3 text-sm">
@@ -368,7 +417,7 @@ export function CommentLayer({
                     : 'No se pudo transcribir el audio.')}
               </p>
               {seleccionado.errorMsg && !fallos[seleccionado.id] && (
-                <p data-testid="comment-error-detail" className="mt-1 break-words text-[11px] text-gris-txt">{seleccionado.errorMsg}</p>
+                <p data-testid="comment-error-detail" className="mt-1 break-words text-xs text-gris-txt">{seleccionado.errorMsg}</p>
               )}
               {uid === seleccionado.autorId && (
                 <button
@@ -397,17 +446,15 @@ export function CommentLayer({
           )}
 
           {uid === seleccionado.autorId && (
-            <button
-              type="button"
+            <IconButton
+              icono="solar:trash-bin-minimalistic-linear"
+              label="Borrar comentario"
               data-testid="comment-delete"
-              aria-label="Borrar comentario"
-              title="Borrar comentario"
+              tamano="sm"
               onClick={() => borrar(seleccionado)}
               disabled={busy}
-              className="absolute bottom-2 right-2 grid h-8 w-8 place-items-center rounded-lg text-terracota opacity-0 transition-opacity hover:bg-azul-tint focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-azul-dark group-hover:opacity-100 motion-reduce:transition-none disabled:opacity-40 [@media(hover:none)]:opacity-100"
-            >
-              <Icon icon="solar:trash-bin-minimalistic-linear" width={18} />
-            </button>
+              className="absolute bottom-2 right-2 text-terracota opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+            />
           )}
         </div>
       )}
@@ -428,21 +475,49 @@ export function CommentLayer({
               onError={(m) => setError(m)}
             />
           ) : (
-            <label className="block text-sm text-gris-txt-oscuro">
-              Comentario
-              <textarea
-                data-testid="comment-text-input"
-                value={texto}
-                maxLength={TEXTO_MAX}
-                onChange={(e) => setTexto(e.target.value)}
-                rows={3}
-                autoFocus
-                className="mt-1 w-full resize-none rounded-lg border border-gris-line bg-white p-2 text-sm text-azul-dark focus:border-azul focus:outline-none"
-              />
-            </label>
+            <div className="block text-sm text-gris-txt-oscuro">
+              <div className="flex items-start gap-s2">
+                <div className="min-w-0 flex-1">
+                  <EditorFormato key={`${borrador.x}-${borrador.y}-${borrador.pagina}`} insertar={insertado} onChange={(h, t) => { setHtml(h); setTexto(t); }} />
+                </div>
+                <IconButton icono="solar:magic-stick-3-linear" label="Redactar con IA" data-testid="comment-ia" tamano="sm" variante="secundaria" onClick={() => setIaAbierta(true)} />
+              </div>
+            </div>
           )}
 
+          {adjunto && !grabando && (
+            <div data-testid="comment-attachment" className="mt-s3 flex items-center justify-between gap-s2 rounded-lg bg-gris-bg/60 px-s3 py-s2 text-xs text-azul-dark">
+              <span className="truncate">{adjunto.name}</span>
+              <IconButton icono="solar:close-linear" label="Quitar adjunto" tamano="sm" onClick={() => elegirAdjunto(null)} />
+            </div>
+          )}
           <div className="mt-3 flex items-center justify-end gap-2">
+            {!grabando && (
+              <div className="relative mr-auto flex items-center gap-s2">
+                <IconButton
+                  icono="solar:paperclip-linear"
+                  label="Adjuntar"
+                  data-testid="comment-attach"
+                  tamano="sm"
+                  variante="secundaria"
+                  aria-expanded={menuAdjuntar}
+                  onClick={() => setMenuAdjuntar((o) => !o)}
+                  disabled={busy}
+                />
+                {menuAdjuntar && (
+                  <div role="menu" data-testid="comment-attach-menu" className="absolute bottom-full left-0 mb-s2 flex w-44 flex-col gap-s1 rounded-xl border border-gris-line bg-white p-s1 shadow-xl">
+                    <Button variante="fantasma" tamano="sm" icono="solar:camera-linear" data-testid="comment-attach-photo" className="justify-start" onClick={() => cameraRef.current?.click()}>
+                      Hacer foto
+                    </Button>
+                    <Button variante="fantasma" tamano="sm" icono="solar:upload-linear" data-testid="comment-attach-file" className="justify-start" onClick={() => fileRef.current?.click()}>
+                      Subir archivo
+                    </Button>
+                  </div>
+                )}
+                <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" data-testid="comment-attach-camera-input" onChange={(e) => elegirAdjunto(e.target.files?.[0] ?? null)} />
+                <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" data-testid="comment-attach-file-input" onChange={(e) => elegirAdjunto(e.target.files?.[0] ?? null)} />
+              </div>
+            )}
             {!grabando && (
               <button
                 type="button"
@@ -454,42 +529,39 @@ export function CommentLayer({
                   setGrabando(true);
                 }}
                 disabled={busy}
-                className="mr-auto grid h-9 w-9 place-items-center rounded-full border border-gris-line text-azul-dark hover:bg-azul-tint disabled:opacity-50"
+                className="grid h-9 w-9 place-items-center rounded-full border border-gris-line text-azul-dark hover:bg-azul-tint disabled:opacity-50"
               >
                 <Icon icon="solar:microphone-linear" width={18} />
               </button>
             )}
             {!grabando && (
               <>
-                <button
-                  type="button"
-                  data-testid="comment-cancel"
-                  onClick={() => {
-                    setBorrador(null);
-                    onSalirModo();
-                  }}
-                  disabled={busy}
-                  className="rounded-lg border border-gris-line px-3 py-1.5 text-sm text-azul-dark hover:bg-azul-tint"
-                >
+                <Button variante="secundaria" tamano="sm" data-testid="comment-cancel" onClick={() => { setBorrador(null); onSalirModo(); }} disabled={busy}>
                   Cancelar
-                </button>
-                <button
-                  type="button"
-                  data-testid="comment-save"
-                  onClick={guardar}
-                  disabled={busy || texto.trim().length === 0}
-                  className="rounded-lg bg-azul px-3 py-1.5 text-sm text-white shadow hover:bg-azul-mid disabled:opacity-50"
-                >
+                </Button>
+                <Button variante="primaria" tamano="sm" data-testid="comment-save" onClick={guardar} disabled={busy || (texto.trim().length === 0 && !adjunto)}>
                   {busy ? 'Guardando…' : 'Guardar'}
-                </button>
+                </Button>
               </>
             )}
           </div>
         </div>
       )}
 
+      {iaAbierta && (
+        <IaComentarioModal
+          onCerrar={() => setIaAbierta(false)}
+          onUsar={(t) => {
+            setInsertado({ valor: t, version: (insertado?.version ?? 0) + 1 });
+            setTexto(t);
+            setHtml('');
+            setIaAbierta(false);
+          }}
+        />
+      )}
+
       {error && (
-        <p role="alert" data-testid="comment-error" className="pointer-events-auto absolute bottom-3 left-1/2 -translate-x-1/2 rounded-lg bg-white px-3 py-2 text-xs text-terracota shadow">
+        <p role="alert" data-testid="comment-error" className="pointer-events-auto absolute top-20 left-1/2 -translate-x-1/2 rounded-lg bg-white px-3 py-2 text-xs text-terracota shadow">
           {error}
         </p>
       )}
